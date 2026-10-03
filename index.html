@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Network elements · interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0F4; --panel:#FFFFFF; --ink:#16243A; --muted:#5A6678; --rule:#D2D8E0; --rule-strong:#AEB7C4;
+  --s:#3D6FD6; --i:#E0443A; --r:#2E9B5A; --off:#B8C0CC; --focus:#3D6FD6;
+  --sans:"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Source Serif 4", "Times New Roman", Georgia, serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131A25; --panel:#1B2432; --ink:#E5EAF1; --muted:#9AA6B7; --rule:#2D394B; --rule-strong:#4A586C;
+    --s:#6A93EC; --i:#F0625A; --r:#4CC07E; --off:#56637A; --focus:#6A93EC;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131A25; --panel:#1B2432; --ink:#E5EAF1; --muted:#9AA6B7; --rule:#2D394B; --rule-strong:#4A586C;
+  --s:#6A93EC; --i:#F0625A; --r:#4CC07E; --off:#56637A; --focus:#6A93EC;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1320px;margin:0 auto;padding:20px clamp(12px,3vw,32px) 40px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:16px}
+header h1{font-family:var(--serif);font-weight:400;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0;letter-spacing:-.01em}
+header .src{margin-left:auto;color:var(--muted);font-size:13px}
+
+nav.tabs{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px;border-bottom:1px solid var(--rule);padding-bottom:12px}
+.group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.group .sec{font-family:var(--serif);font-size:15px;color:var(--muted);margin-right:4px;white-space:nowrap}
+.tab{font:inherit;font-size:14px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.tab:hover{border-color:var(--rule-strong)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.panel{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+.panel[hidden]{display:none}
+.stage{background:var(--panel);border:1px solid var(--rule);border-radius:10px;position:relative;min-width:0}
+.stage canvas.main{display:block;width:100%;height:min(74vh,760px);min-height:320px;touch-action:manipulation}
+#p-bc canvas.main{height:min(44vh,440px);min-height:260px}
+.stage canvas.traj{display:block;width:100%;height:min(32vh,320px);min-height:200px;border-top:1px solid var(--rule)}
+.stage .hint{margin:0;padding:0 14px 10px;font-size:13px;color:var(--muted)}
+.legend{position:absolute;right:14px;top:12px;display:flex;gap:12px;font-size:13px;color:var(--muted);flex-wrap:wrap;justify-content:flex-end;pointer-events:none}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:5px;vertical-align:-1px}
+
+.side{min-width:0}
+.side h2{font-family:var(--serif);font-weight:600;font-size:23px;line-height:1.2;margin:0 0 6px}
+.lead{margin:0 0 12px;color:var(--ink);max-width:62ch}
+.formula{font-family:var(--serif);font-size:17px;background:var(--panel);border-left:3px solid var(--ink);padding:9px 12px;margin:0 0 14px;line-height:1.55;overflow-x:auto}
+.formula i,.ctl i,.ro i,.lead i,.note i{font-family:var(--serif);font-style:italic}
+.formula small{font-family:var(--sans);font-size:12.5px;color:var(--muted);display:block;margin-top:2px}
+
+.controls{display:grid;gap:9px;margin-bottom:12px}
+.ctl{display:grid;grid-template-columns:minmax(118px,auto) 1fr 52px;align-items:center;gap:10px;font-size:14px}
+.ctl label{color:var(--muted)}
+.ctl output{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--serif);font-size:15px}
+.ctl input[type=range]{width:100%;accent-color:var(--ink)}
+.ctl select{grid-column:2 / 4;font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--panel);color:var(--ink)}
+
+.buttons{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.btn{font:inherit;font-size:14px;padding:7px 13px;border-radius:7px;border:1px solid var(--rule-strong);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);min-width:72px}
+.btn:disabled{opacity:.5;cursor:default}
+
+.readouts{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px 14px;margin:0 0 14px}
+.ro{border-top:1px solid var(--rule);padding-top:5px}
+.ro dt{font-size:12.5px;color:var(--muted)}
+.ro dd{margin:0;font-family:var(--serif);font-size:20px;font-variant-numeric:tabular-nums;line-height:1.2}
+.status{font-size:14px;color:var(--muted);margin:-6px 0 12px;min-height:1.5em}
+
+.chart{margin-bottom:12px}
+.chart figcaption{font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.chart canvas{display:block;width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:8px}
+.refs{margin-top:14px;border-top:1px solid var(--rule);padding-top:8px;font-size:13.5px}
+.refs summary{cursor:pointer;color:var(--ink);font-weight:500}
+.refs ol{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+.refs li{margin-bottom:6px;max-width:62ch}
+.refs li i{font-family:var(--serif);font-style:italic}
+footer{margin-top:28px;padding-top:12px;border-top:1px solid var(--rule);color:var(--muted);font-size:13px}
+footer i{font-family:var(--serif)}
+.note{font-size:13.5px;color:var(--muted);max-width:62ch;margin:6px 0 0}
+
+@media (max-width:900px){
+  .panel{grid-template-columns:1fr}
+  .stage canvas.main{height:min(62vh,560px)}
+  header .src{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+:root{--y:#D9A11E;--mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--y:#E8BC52}}
+:root[data-theme="dark"]{--y:#E8BC52}
+.code{margin:0 0 12px}
+.code figcaption{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.code .copy{font:inherit;font-size:12px;border:1px solid var(--rule-strong);background:var(--panel);color:var(--ink);border-radius:5px;padding:2px 9px;cursor:pointer;white-space:nowrap}
+.code pre{margin:0;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre}
+.binom{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.05;margin:0 2px;position:relative;padding:0 7px;font-size:.92em}
+.binom::before,.binom::after{content:"";position:absolute;top:1px;bottom:1px;width:5px;border:1.2px solid currentColor}
+.binom::before{left:0;border-right:none;border-radius:7px 0 0 7px}
+.binom::after{right:0;border-left:none;border-radius:0 7px 7px 0}
+.tablewrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}
+table.data{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:5px 5px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.data th:first-child,table.data td:first-child{text-align:left;white-space:normal;min-width:96px}
+table.data th{color:var(--muted);font-weight:500}
+table.data tbody tr{cursor:pointer}
+table.data tbody tr:hover{background:var(--paper)}
+table.data tbody tr[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+table.data tbody tr:last-child td{border-bottom:none}
+.sub-h{font-size:13px;color:var(--muted);margin:2px 0 6px;font-weight:500}
+.calc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 6px}
+.calc label{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.calc input,.calc select{font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--panel);color:var(--ink);width:100%;min-width:0}
+.calc-out{font-family:var(--serif);font-size:16px;margin:0 0 14px;min-height:1.4em}
+.stage canvas.sub{display:block;width:100%;height:min(32vh,320px);min-height:200px;border-top:1px solid var(--rule)}
+#p-den canvas.main{height:min(42vh,420px);min-height:240px}
+#p-adj canvas.main{height:min(68vh,660px);min-height:420px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Network elements</h1>
+  <span class="src">Created by Claude Opus 5.5 based on the lecture slides by Sang Hoon Lee</span>
+</header>
+<nav class="tabs" id="tabs" role="tablist" aria-label="Topics"></nav>
+<main id="panels"></main>
+<footer>Interactive companion to the lecture “Network elements” (Chapter 1 of <i>A First Course in Network Science</i>). Created by Claude Opus 5.5 based on the lecture slides by Sang Hoon Lee.</footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- utilities ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const el=h=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstElementChild;};
+const ri=n=>Math.floor(Math.random()*n);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function erf(x){const s=Math.sign(x);x=Math.abs(x);const t=1/(1+0.3275911*x);
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return s*y;}
+const Phi=z=>0.5*(1+erf(z/Math.SQRT2));
+const pct=x=>(100*x).toFixed(x<0.1&&x>0?1:0)+'%';
+
+let TK={};
+function readTokens(){const cs=getComputedStyle(document.documentElement);
+  ['--paper','--panel','--ink','--muted','--rule','--rule-strong','--s','--i','--r','--off','--y'].forEach(k=>TK[k.slice(2)]=cs.getPropertyValue(k).trim());}
+readTokens();
+
+function fitCanvas(cv){const r=cv.getBoundingClientRect();const d=window.devicePixelRatio||1;
+  const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return {ctx,w:r.width,h:r.height};}
+
+function hex2rgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return [n>>16&255,n>>8&255,n&255];}
+function ramp(t){const a=hex2rgb(TK.s),m=[150,96,200],b=hex2rgb(TK.i);let c;
+  if(t<.5){const u=t*2;c=a.map((v,k)=>v+(m[k]-v)*u);}else{const u=(t-.5)*2;c=m.map((v,k)=>v+(b[k]-v)*u);}
+  return `rgb(${c.map(Math.round).join(',')})`;}
+
+/* ---------- graphs ---------- */
+function makeGraph(type,N,k){
+  const adj=Array.from({length:N},()=>[]);const has=new Set();
+  const add=(a,b)=>{if(a===b)return false;const key=a<b?a*N+b:b*N+a;if(has.has(key))return false;has.add(key);adj[a].push(b);adj[b].push(a);return true;};
+  if(type==='ba'){
+    const m=Math.max(1,Math.round(k/2));const tg=[];
+    for(let i=0;i<=m;i++)for(let j=0;j<i;j++){add(i,j);tg.push(i,j);}
+    for(let i=m+1;i<N;i++){const ch=new Set();let guard=0;while(ch.size<m&&guard++<1000)ch.add(tg[ri(tg.length)]);
+      for(const c of ch){if(add(i,c))tg.push(i,c);}}
+  }else{
+    const M=Math.round(N*k/2);let guard=0;let e=0;while(e<M&&guard++<M*50){if(add(ri(N),ri(N)))e++;}
+  }
+  return finishGraph({N,adj,type});
+}
+function finishGraph(g){const N=g.N;let s=0,s2=0,mx=0,hub=0;
+  for(let i=0;i<N;i++){const d=g.adj[i].length;s+=d;s2+=d*d;if(d>mx){mx=d;hub=i;}}
+  g.k=s/N;g.k2=s2/N;g.kmax=mx;g.hub=hub;return g;}
+function makeLattice(L){const n=L*L;const adj=Array.from({length:n},()=>[]);
+    for(let y=0;y<L;y++)for(let x=0;x<L;x++){const i=y*L+x;if(x+1<L){adj[i].push(i+1);adj[i+1].push(i);}if(y+1<L){adj[i].push(i+L);adj[i+L].push(i);}}
+    const gg=finishGraph({N:n,adj,type:'lat'});gg.px=new Float64Array(n);gg.py=new Float64Array(n);for(let i=0;i<n;i++){gg.px[i]=i%L;gg.py[i]=Math.floor(i/L);}return gg;}
+function frLayout(g,iters,t0,init){
+  const N=g.N;if(init||!g.px){g.px=new Float64Array(N);g.py=new Float64Array(N);
+    for(let i=0;i<N;i++){const a=Math.random()*6.283,r=Math.sqrt(Math.random())*.5;g.px[i]=r*Math.cos(a);g.py[i]=r*Math.sin(a);}}
+  const px=g.px,py=g.py,k=Math.sqrt(1/N),k2=k*k;const dx=new Float64Array(N),dy=new Float64Array(N);
+  for(let it=0;it<iters;it++){const t=t0*(1-it/iters)+0.002;dx.fill(0);dy.fill(0);
+    for(let i=0;i<N;i++){const xi=px[i],yi=py[i];for(let j=0;j<i;j++){const ax=xi-px[j],ay=yi-py[j];const d2=ax*ax+ay*ay+1e-9;const f=k2/d2;
+      dx[i]+=ax*f;dy[i]+=ay*f;dx[j]-=ax*f;dy[j]-=ay*f;}}
+    for(let a=0;a<N;a++){for(const b of g.adj[a]){if(b<a)continue;const ax=px[a]-px[b],ay=py[a]-py[b];const d=Math.sqrt(ax*ax+ay*ay)+1e-9;const f=d/k;
+      dx[a]-=ax*f;dy[a]-=ay*f;dx[b]+=ax*f;dy[b]+=ay*f;}}
+    for(let i=0;i<N;i++){dx[i]-=px[i]*k*4;dy[i]-=py[i]*k*4;const L=Math.sqrt(dx[i]*dx[i]+dy[i]*dy[i]);
+      if(L>0){const s=Math.min(L,t)/L;px[i]+=dx[i]*s;py[i]+=dy[i]*s;}}
+  }
+}
+function components(g){const N=g.N,c=new Int32Array(N).fill(-1);let n=0,big=0;
+  for(let s=0;s<N;s++){if(c[s]>=0)continue;let sz=0;const q=[s];c[s]=n;while(q.length){const u=q.pop();sz++;for(const v of g.adj[u])if(c[v]<0){c[v]=n;q.push(v);}}
+    big=Math.max(big,sz);n++;}return {n,big};}
+
+/* ---------- network drawing ---------- */
+function drawNet(cv,g,o){
+  const {ctx,w,h}=fitCanvas(cv);ctx.clearRect(0,0,w,h);
+  const pad=26;const xs=[],ys=[];
+  for(let i=0;i<g.N;i++)if(g.adj[i].length){xs.push(g.px[i]);ys.push(g.py[i]);}
+  if(!xs.length){for(let i=0;i<g.N;i++){xs.push(g.px[i]);ys.push(g.py[i]);}}
+  xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);const q=Math.floor(xs.length*0.01);
+  const x0=xs[q],x1=xs[xs.length-1-q],y0=ys[q],y1=ys[ys.length-1-q];
+  const sc=Math.min((w-2*pad)/(x1-x0||1),(h-2*pad-18)/(y1-y0||1));
+  const ox=(w-(x1-x0)*sc)/2-x0*sc,oy=(h-18-(y1-y0)*sc)/2-y0*sc+4;
+  const X=i=>ox+clamp(g.px[i],x0,x1)*sc,Y=i=>oy+clamp(g.py[i],y0,y1)*sc;
+  const base=clamp(Math.min(w,h)/Math.sqrt(g.N)*0.15,2.2,8);
+  const rad=i=>o.sizeByDegree?base*(0.55+0.45*Math.sqrt(g.adj[i].length/(g.k||1))):base;
+  ctx.lineCap='round';
+  ctx.strokeStyle=TK['rule-strong'];ctx.lineWidth=0.7;ctx.globalAlpha=0.75;ctx.beginPath();
+  for(let a=0;a<g.N;a++)for(const b of g.adj[a]){if(b<a)continue;if(o.edgeColor){continue;}ctx.moveTo(X(a),Y(a));ctx.lineTo(X(b),Y(b));}
+  ctx.stroke();ctx.globalAlpha=1;
+  if(o.edgeColor){for(let a=0;a<g.N;a++)for(const b of g.adj[a]){if(b<a)continue;const ec=o.edgeColor(a,b);
+      ctx.strokeStyle=ec.c;ctx.lineWidth=ec.w||0.8;ctx.globalAlpha=ec.a??0.8;ctx.setLineDash(ec.dash||[]);ctx.beginPath();ctx.moveTo(X(a),Y(a));ctx.lineTo(X(b),Y(b));ctx.stroke();}
+    ctx.setLineDash([]);ctx.globalAlpha=1;}
+  if(o.highlight){for(const [a,b,ok] of o.highlight){ctx.strokeStyle=ok?TK.i:TK.muted;ctx.lineWidth=ok?2.4:1.2;ctx.setLineDash(ok?[]:[3,3]);
+      ctx.beginPath();ctx.moveTo(X(a),Y(a));ctx.lineTo(X(b),Y(b));ctx.stroke();}ctx.setLineDash([]);}
+  for(let i=0;i<g.N;i++){const r=rad(i);ctx.beginPath();ctx.arc(X(i),Y(i),r,0,6.2832);ctx.fillStyle=o.color(i);ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle=TK.panel;ctx.stroke();
+    if(o.ring&&o.ring(i)){ctx.beginPath();ctx.arc(X(i),Y(i),r+2.6,0,6.2832);ctx.strokeStyle=TK.ink;ctx.lineWidth=1.6;ctx.stroke();}}
+  cv._hit={X,Y,rad,N:g.N};
+}
+function hitNode(cv,e){const m=cv._hit;if(!m)return -1;const b=cv.getBoundingClientRect();const x=e.clientX-b.left,y=e.clientY-b.top;
+  let best=-1,bd=1e9;for(let i=0;i<m.N;i++){const d=Math.hypot(m.X(i)-x,m.Y(i)-y);if(d<bd){bd=d;best=i;}}
+  return bd<=m.rad(best)+8?best:-1;}
+
+/* ---------- charts ---------- */
+function niceTicks(a,b,n){const span=b-a||1;const st=Math.pow(10,Math.floor(Math.log10(span/n)));const err=span/n/st;
+  const step=st*(err>=7.5?10:err>=3.5?5:err>=1.5?2:1);const out=[];for(let v=Math.ceil(a/step)*step;v<=b+1e-9;v+=step)out.push(+v.toFixed(10));return out;}
+function chart(cv,o){
+  const {ctx,w,h}=fitCanvas(cv);ctx.clearRect(0,0,w,h);
+  const L=o.left??40,R=o.right??12,T=12,B=o.xLabel?36:24;const pw=w-L-R,ph=h-T-B;
+  const xa=o.xMin??0,xb=o.xMax,ya=o.yMin??0,yb=o.yMax??1;
+  const X=x=>L+(x-xa)/(xb-xa)*pw,Y=y=>T+ph-(y-ya)/(yb-ya)*ph;
+  ctx.font='11.5px "Instrument Sans", system-ui, sans-serif';ctx.fillStyle=TK.muted;ctx.strokeStyle=TK.rule;ctx.lineWidth=1;
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(const v of niceTicks(ya,yb,o.yTicks||4)){ctx.beginPath();ctx.moveTo(L,Y(v));ctx.lineTo(L+pw,Y(v));ctx.stroke();ctx.fillText(o.yFmt?o.yFmt(v):v,L-6,Y(v));}
+  ctx.textAlign='center';ctx.textBaseline='top';
+  for(const v of niceTicks(xa,xb,o.xTicks||5)){ctx.fillText(o.xFmt?o.xFmt(v):v,X(v),T+ph+5);}
+  ctx.strokeStyle=TK['rule-strong'];ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,T+ph);ctx.lineTo(L+pw,T+ph);ctx.stroke();
+  if(o.xLabel){ctx.font='italic 13px "Source Serif 4", Georgia, serif';ctx.fillText(o.xLabel,L+pw/2,T+ph+19);}
+  if(o.yLabel){ctx.save();ctx.translate(Math.max(11,L-44),T+ph/2);ctx.rotate(-Math.PI/2);ctx.font='italic 13px "Source Serif 4", Georgia, serif';ctx.textBaseline='middle';ctx.fillText(o.yLabel,0,0);ctx.restore();}
+  ctx.save();ctx.beginPath();ctx.rect(L,T-2,pw,ph+4);ctx.clip();
+  for(const v of (o.vlines||[])){ctx.strokeStyle=v.color||TK.muted;ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(X(v.x),T);ctx.lineTo(X(v.x),T+ph);ctx.stroke();ctx.setLineDash([]);}
+  for(const s of (o.bars||[])){ctx.fillStyle=s.color;ctx.globalAlpha=.85;const bw=pw/s.ys.length;
+    s.ys.forEach((y,i)=>{if(y>0)ctx.fillRect(L+i*bw+1,Y(y),bw-2,Y(ya)-Y(y));});ctx.globalAlpha=1;}
+  for(const s of (o.series||[])){const pts=s.pts||s.ys.map((y,i)=>[i*(s.dx||1)+(s.x0||0),y]);if(!pts.length)continue;
+    ctx.strokeStyle=s.color;ctx.lineWidth=s.width||1.8;ctx.setLineDash(s.dash||[]);ctx.beginPath();
+    pts.forEach(([x,y],i)=>i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y)));ctx.stroke();ctx.setLineDash([]);
+    if(s.dots){ctx.fillStyle=s.color;for(const [x,y] of pts){ctx.beginPath();ctx.arc(X(x),Y(y),2.6,0,6.3);ctx.fill();}}}
+  ctx.restore();
+  if(o.empty){ctx.fillStyle=TK.muted;ctx.font='13px "Instrument Sans", system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.empty,L+pw/2,T+ph/2);}
+  return {ctx,X,Y,L,T,pw,ph};
+}
+
+/* ---------- panel builder ---------- */
+const groups=[{sec:'a',name:'Basics',tabs:[]},{sec:'b',name:'Density',tabs:[]},{sec:'c',name:'Representation',tabs:[]},{sec:'d',name:'Beyond simple networks',tabs:[]}];
+const models={};
+function buildPanel(def){
+  const p=el(`<section class="panel" id="p-${def.id}" role="tabpanel" hidden>
+    <div class="stage"><canvas class="main" role="img" aria-label="${def.stageLabel}"></canvas>
+      ${def.legend?`<div class="legend">${def.legend.map(([c,t])=>`<span style="--c:var(${c})">${t}</span>`).join('')}</div>`:''}
+      <p class="hint">${def.hint||''}</p></div>
+    <div class="side"><h2>${def.title}</h2><p class="lead">${def.lead}</p>
+      <div class="formula">${def.formula||''}</div>
+      <div class="controls"></div><div class="buttons"></div><p class="status" aria-live="polite"></p>
+      <dl class="readouts"></dl><div class="charts"></div>${def.note?`<p class="note">${def.note}</p>`:''}${def.refs?`<details class="refs"><summary>References</summary><ol>${def.refs.map(r=>`<li>${r}</li>`).join('')}</ol></details>`:''}</div></section>`);
+  const api={root:p,canvas:$('canvas.main',p),vals:{},charts:{},outs:{}};
+  const C=$('.controls',p);
+  for(const c of def.controls||[]){
+    if(c.type==='select'){const n=el(`<div class="ctl"><label for="${def.id}-${c.key}">${c.label}</label><select id="${def.id}-${c.key}">${c.options.map(([v,t])=>`<option value="${v}"${v===c.value?' selected':''}>${t}</option>`).join('')}</select></div>`);
+      const s=$('select',n);api.vals[c.key]=c.value;s.onchange=()=>{api.vals[c.key]=s.value;def.onChange&&def.onChange(c.key);};C.append(n);api['ctl_'+c.key]=n;}
+    else{const fmt=c.fmt||(v=>v);const n=el(`<div class="ctl"><label for="${def.id}-${c.key}">${c.label}</label><input type="range" id="${def.id}-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.value}"><output>${fmt(c.value)}</output></div>`);
+      const s=$('input',n),out=$('output',n);api.vals[c.key]=+c.value;
+      s.oninput=()=>{api.vals[c.key]=+s.value;out.textContent=fmt(+s.value);def.onInput&&def.onInput(c.key);};
+      s.onchange=()=>{def.onChange&&def.onChange(c.key);};C.append(n);api['ctl_'+c.key]=n;}
+  }
+  const B=$('.buttons',p);api.btn={};
+  for(const [k,t,cls] of def.buttons||[]){const b=el(`<button class="btn ${cls||''}" type="button">${t}</button>`);B.append(b);api.btn[k]=b;}
+  const R=$('.readouts',p);for(const [k,t] of def.readouts||[]){const n=el(`<div class="ro"><dt>${t}</dt><dd>–</dd></div>`);R.append(n);api.outs[k]=$('dd',n);}
+  const H=$('.charts',p);for(const [k,cap,ht] of def.charts||[]){const n=el(`<figure class="chart" style="margin:0 0 12px"><figcaption>${cap}</figcaption><canvas style="height:${ht||150}px"></canvas></figure>`);H.append(n);api.charts[k]=$('canvas',n);api['cap_'+k]=$('figcaption',n);}
+  api.out=(k,v)=>{api.outs[k].textContent=v;};
+  api.status=t=>{$('.status',p).textContent=t;};
+  api.formula=h=>{$('.formula',p).innerHTML=h;};
+  api.hint=h=>{$('.hint',p).innerHTML=h;};
+  $('#panels').append(p);
+  return api;
+}
+/* runner: play/pause loop */
+function attachRunner(m){
+  let playing=false,last=0,acc=0;const P=m.ui;
+  const setBtn=()=>{P.btn.play.textContent=playing?'Pause':'Play';};
+  function frame(ts){if(!playing)return;const dt=Math.min(0.25,(ts-last)/1000);last=ts;acc+=dt*(m.speed?m.speed():P.vals.speed||5);
+    let n=Math.floor(acc);acc-=n;n=Math.min(n,m.maxPerFrame||40);
+    for(let i=0;i<n;i++){if(m.done()){stop();break;}m.step();}
+    m.render();if(m.done())stop();if(playing)requestAnimationFrame(frame);}
+  function start(){if(m.done())m.reset();playing=true;last=performance.now();acc=1;setBtn();requestAnimationFrame(frame);}
+  function stop(){playing=false;setBtn();}
+  P.btn.play.onclick=()=>playing?stop():start();
+  if(P.btn.step)P.btn.step.onclick=()=>{stop();if(!m.done())m.step();m.render();};
+  if(P.btn.reset)P.btn.reset.onclick=()=>{stop();m.reset();m.render();};
+  m.stop=stop;m.isPlaying=()=>playing;setBtn();
+}
+function register(sec,id,label,m){groups.find(g=>g.sec===sec).tabs.push({id,label});models[id]=m;}
+
+const speedCtl=(v=5,max=30)=>({key:'speed',label:'Speed (steps/s)',min:1,max,step:1,value:v});
+const netCtl=v=>({type:'select',key:'net',label:'Network',options:[['er','Random (Erdős–Rényi)'],['ba','Scale-free (Barabási–Albert)']],value:v||'er'});
+const kCtl=(v=4,max=12)=>({key:'k',label:'Mean degree <i>⟨k⟩</i>',min:2,max,step:1,value:v});
+
+/* ---------- helpers for the elements page ---------- */
+const SANS='"Instrument Sans", system-ui, sans-serif',SERIF='"Source Serif 4", Georgia, serif';
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+const sup=v=>String(v).split('').map(c=>SUP[c]||c).join('');
+const pow10=v=>Number.isInteger(v)?(v===0?'1':v===1?'10':'10'+sup(v)):'';
+const fmtInt=n=>Number(n).toLocaleString('en-US');
+function pyFloat(x){if(!isFinite(x))return String(x);if(Number.isInteger(x)&&Math.abs(x)<1e16)return x.toFixed(1);
+  const a=Math.abs(x);if(a!==0&&a<1e-4)return x.toExponential().replace(/e([+-])(\d)$/,'e$10$2');return String(x);}
+function fitRect(ctx,r,bx,pad){const W=bx[2]-bx[0]||1,H=bx[3]-bx[1]||1;const s=Math.min((r.w-2*pad)/W,(r.h-2*pad)/H);
+  const ox=r.x+(r.w-W*s)/2-bx[0]*s,oy=r.y+(r.h-H*s)/2-bx[1]*s;return {ctx,s,X:x=>ox+x*s,Y:y=>oy+y*s,inv:(px,py)=>[(px-ox)/s,(py-oy)/s]};}
+function viewBox(cv,W,H,pad){const {ctx,w,h}=fitCanvas(cv);ctx.clearRect(0,0,w,h);const v=fitRect(ctx,{x:0,y:0,w,h},[0,0,W,H],pad);v.w=w;v.h=h;return v;}
+function evPos(cv,e){const b=cv.getBoundingClientRect();return [e.clientX-b.left,e.clientY-b.top];}
+function nrm(x,y){const L=Math.hypot(x,y)||1;return [x/L,y/L];}
+function qpt(P,C,Q,t){const u=1-t;return [u*u*P[0]+2*u*t*C[0]+t*t*Q[0],u*u*P[1]+2*u*t*C[1]+t*t*Q[1]];}
+function edgeCtrl(P,Q,bend){const mx=(P[0]+Q[0])/2,my=(P[1]+Q[1])/2;const [dx,dy]=nrm(Q[0]-P[0],Q[1]-P[1]);return [mx-dy*bend*2,my+dx*bend*2];}
+function labelBox(ctx,s,x,y,color,font){ctx.font=font||`600 12px ${SANS}`;const tw=ctx.measureText(s).width;
+  ctx.fillStyle=TK.panel;ctx.globalAlpha=0.92;ctx.fillRect(x-tw/2-4,y-9,tw+8,18);ctx.globalAlpha=1;
+  ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s,x,y+0.5);}
+function drawLink(ctx,P,Q,o){
+  const C=o.bend?edgeCtrl(P,Q,o.bend):[(P[0]+Q[0])/2,(P[1]+Q[1])/2];
+  const t1=nrm(C[0]-P[0],C[1]-P[1]),t2=nrm(Q[0]-C[0],Q[1]-C[1]);
+  const A=[P[0]+t1[0]*(o.r1||0),P[1]+t1[1]*(o.r1||0)],B=[Q[0]-t2[0]*(o.r2||0),Q[1]-t2[1]*(o.r2||0)];
+  const ah=o.arrow?Math.max(9,(o.width||1.5)*2.6+4):0;const E=[B[0]-t2[0]*ah*0.7,B[1]-t2[1]*ah*0.7];
+  ctx.save();ctx.globalAlpha=o.alpha??1;ctx.strokeStyle=o.color;ctx.lineWidth=o.width||1.5;ctx.lineCap='round';ctx.setLineDash(o.dash||[]);
+  ctx.beginPath();ctx.moveTo(A[0],A[1]);const end=o.arrow?E:B;
+  if(o.bend)ctx.quadraticCurveTo(C[0],C[1],end[0],end[1]);else ctx.lineTo(end[0],end[1]);ctx.stroke();ctx.setLineDash([]);
+  if(o.arrow){const px=-t2[1],py=t2[0];ctx.fillStyle=o.color;ctx.beginPath();ctx.moveTo(B[0],B[1]);
+    ctx.lineTo(B[0]-t2[0]*ah+px*ah*0.42,B[1]-t2[1]*ah+py*ah*0.42);ctx.lineTo(B[0]-t2[0]*ah-px*ah*0.42,B[1]-t2[1]*ah-py*ah*0.42);ctx.closePath();ctx.fill();}
+  ctx.restore();
+  if(o.label!=null){const M=o.bend?qpt(P,C,Q,0.5):[(P[0]+Q[0])/2,(P[1]+Q[1])/2];labelBox(ctx,String(o.label),M[0],M[1],o.labelColor||o.color,o.labelFont);}
+  return {P,C,Q,bend:!!o.bend};
+}
+function distToLink(g,x,y){let b=1e9;for(let i=0;i<=24;i++){const t=i/24;const p=g.bend?qpt(g.P,g.C,g.Q,t):[g.P[0]+(g.Q[0]-g.P[0])*t,g.P[1]+(g.Q[1]-g.P[1])*t];b=Math.min(b,Math.hypot(p[0]-x,p[1]-y));}return b;}
+function drawNode(ctx,x,y,r,o){ctx.save();ctx.globalAlpha=o.alpha??1;ctx.beginPath();ctx.arc(x,y,r,0,6.2832);
+  if(o.tint){ctx.fillStyle=TK.panel;ctx.fill();ctx.globalAlpha=(o.alpha??1)*(o.tintAlpha??0.3);ctx.fillStyle=o.tint;ctx.fill();ctx.globalAlpha=o.alpha??1;}
+  else{ctx.fillStyle=o.fill||TK.panel;ctx.fill();}
+  ctx.lineWidth=o.lw||2;ctx.strokeStyle=o.stroke||TK.ink;ctx.stroke();
+  if(o.label!=null){ctx.fillStyle=o.labelColor||TK.ink;ctx.font=o.font||`600 ${Math.round(clamp(r*0.85,9,16))}px ${SANS}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.label,x,y+0.5);}
+  ctx.restore();}
+function txt(ctx,s,x,y,o={}){ctx.font=o.font||`13px ${SANS}`;ctx.fillStyle=o.color||TK.ink;ctx.textAlign=o.align||'center';ctx.textBaseline=o.base||'middle';ctx.fillText(s,x,y);}
+/* "k_in = 3" style label with a real subscript */
+function subLabel(ctx,x,y,base,sub,rest,color,size=14){const f1=`italic ${size}px ${SERIF}`,f2=`${Math.round(size*0.72)}px ${SERIF}`,f3=`${size}px ${SERIF}`;
+  ctx.font=f1;const w1=ctx.measureText(base).width;ctx.font=f2;const w2=sub?ctx.measureText(sub).width:0;ctx.font=f3;const w3=ctx.measureText(rest).width;
+  let cx=x-(w1+w2+w3)/2;ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.font=f1;ctx.fillText(base,cx,y);cx+=w1;if(sub){ctx.font=f2;ctx.fillText(sub,cx,y+size*0.3);cx+=w2;}ctx.font=f3;ctx.fillText(rest,cx,y);}
+function addCode(ui,caption,anchor){const f=el(`<figure class="code"><figcaption><span>${caption}</span><button class="copy" type="button">Copy</button></figcaption><pre><code></code></pre></figure>`);
+  (anchor||$('.charts',ui.root)).after(f);const code=$('code',f),btn=$('.copy',f);
+  btn.onclick=async()=>{try{await navigator.clipboard.writeText(code.textContent);btn.textContent='Copied';}catch(e){btn.textContent='Select and copy';}setTimeout(()=>btn.textContent='Copy',1400);};
+  return t=>{code.textContent=t;};}
+function degBars(cv,ys,o){const K=ys.length-1;const c=chart(cv,{xMin:-0.6,xMax:K+0.6,yMax:o.yMax,yTicks:3,xTicks:Math.min(K+1,10),xLabel:o.xLabel||'k',
+    xFmt:o.xFmt||(v=>Number.isInteger(v)&&v>=0?String(v):''),yFmt:o.yFmt});
+  const bw=Math.min(30,(c.X(1)-c.X(0))*0.62);c.ctx.fillStyle=o.color||TK.s;ys.forEach((y,k)=>{if(y>0)c.ctx.fillRect(c.X(k)-bw/2,c.Y(y),bw,c.Y(0)-c.Y(y));});return c;}
+const BOOK='F. Menczer, S. Fortunato, and C. A. Davis, <i>A First Course in Network Science</i>, Cambridge University Press (2020), Ch. 1.';
+const NXREF='A. A. Hagberg, D. A. Schult, and P. J. Swart, “Exploring network structure, dynamics, and function using NetworkX,” <i>Proc. 7th Python in Science Conference (SciPy 2008)</i>, 11–15 (2008).';
+const NEWMAN='M. E. J. Newman, <i>Networks</i>, 2nd ed., Oxford University Press (2018).';
+const BARABASI='A.-L. Barabási, <i>Network Science</i>, Cambridge University Press (2016).';
+
+/* =========================================================
+   Nodes, links, and degree (editable network)
+   ========================================================= */
+(function(){
+  const W=1.4,H=1;
+  const ui=buildPanel({id:'deg',title:'Nodes, links, and degree',
+    stageLabel:'Editable network showing each node’s degree',
+    legend:[['--s','degree k'],['--i','links of the selected node']],
+    hint:'Click empty space to add a node. Click a node, then another node, to add or remove the link between them. Drag to move a node. Click a link to delete it, or press Delete to remove the selected node.',
+    lead:'A network is a set of nodes (vertices) joined by links (edges). The degree <i>k</i> of a node is its number of links, and the nodes it is linked to are its neighbors. Edit the network and watch the numbers change.',
+    formula:'Σ<sub><i>i</i>=1</sub><sup><i>N</i></sup> <i>k<sub>i</sub></i> = 2<i>L</i> &nbsp;⇒&nbsp; ⟨<i>k</i>⟩ = Σ<sub><i>i</i></sub> <i>k<sub>i</sub></i>/<i>N</i> = 2<i>L</i>/<i>N</i><small>each link adds 1 to the degree of both of its end nodes</small>',
+    controls:[{type:'select',key:'preset',label:'Network',options:[['lecture','Lecture example'],['path','nx.path_graph(5)'],['cycle','nx.cycle_graph(4)'],['star','nx.star_graph(6)'],['bip','nx.complete_bipartite_graph(4, 5)'],['complete','nx.complete_graph(7)'],['empty','Empty network']],value:'lecture'},
+      {type:'select',key:'labels',label:'Degree labels',options:[['on','Show k next to each node'],['off','Hide']],value:'on'}],
+    buttons:[['del','Delete selected node'],['reset','Reset network']],
+    readouts:[['N','Nodes <i>N</i>'],['L','Links <i>L</i>'],['sum','Σ <i>k<sub>i</sub></i>'],['kbar','⟨<i>k</i>⟩ = 2<i>L</i>/<i>N</i>']],
+    charts:[['nk','Degree distribution: number of nodes N<sub>k</sub> with degree k',120],['pk','As probabilities: p<sub>k</sub> = N<sub>k</sub> / N',120]],
+    note:'The lecture example has two nodes with k = 2, four with k = 3, and one with k = 4, so Σk<sub>i</sub> = 20 = 2L and ⟨k⟩ = 20/7 ≈ 2.86. Try the NetworkX generators from the textbook figure and compare their distributions.',
+    refs:[BOOK,NXREF,NEWMAN,BARABASI],
+    onChange:k=>{if(k==='preset')load(ui.vals.preset);else render();}
+  });
+  const setCode=addCode(ui,'The same network in NetworkX');
+  let nodes=[],edges=[],sel=null,presetCode=null,dirty=false,geo=[],V=null,R=14;
+  function load(p){sel=null;dirty=false;nodes=[];edges=[];presetCode=null;const add=(id,x,y)=>nodes.push({id,x,y});
+    if(p==='lecture'){[[360,260],[610,175],[620,365],[820,490],[950,290],[1105,420],[1030,650]].forEach(([x,y],i)=>add(i+1,(x-280)/900*1.4,(y-120)/600));
+      edges=[[1,2],[1,3],[2,3],[3,4],[3,6],[4,5],[4,7],[5,6],[5,7],[6,7]];}
+    else if(p==='path'){for(let i=0;i<5;i++)add(i,0.2+i*0.25,0.5);for(let i=0;i<4;i++)edges.push([i,i+1]);presetCode='G = nx.path_graph(5)';}
+    else if(p==='cycle'){for(let i=0;i<4;i++){const a=-Math.PI/2+i*Math.PI/2;add(i,0.7+0.33*Math.cos(a),0.5+0.33*Math.sin(a));}edges=[[0,1],[1,2],[2,3],[0,3]];presetCode='G = nx.cycle_graph(4)';}
+    else if(p==='star'){add(0,0.7,0.5);for(let i=1;i<=6;i++){const a=-Math.PI/2+(i-1)*Math.PI/3;add(i,0.7+0.37*Math.cos(a),0.5+0.37*Math.sin(a));edges.push([0,i]);}presetCode='G = nx.star_graph(6)';}
+    else if(p==='bip'){for(let i=0;i<4;i++)add(i,0.38,0.2+i*0.2);for(let j=0;j<5;j++)add(4+j,1.02,0.1+j*0.2);for(let i=0;i<4;i++)for(let j=4;j<9;j++)edges.push([i,j]);presetCode='G = nx.complete_bipartite_graph(4, 5)';}
+    else if(p==='complete'){for(let i=0;i<7;i++){const a=-Math.PI/2+i*2*Math.PI/7;add(i,0.7+0.42*Math.cos(a),0.5+0.42*Math.sin(a));}for(let i=0;i<7;i++)for(let j=i+1;j<7;j++)edges.push([i,j]);presetCode='G = nx.complete_graph(7)';}
+    render();}
+  const degOf=id=>edges.reduce((s,[a,b])=>s+(a===id)+(b===id),0);
+  const nbrs=id=>{const r=[];for(const [a,b] of edges){if(a===id)r.push(b);else if(b===id)r.push(a);}return r;};
+  const findE=(a,b)=>edges.findIndex(([x,y])=>(x===a&&y===b)||(x===b&&y===a));
+  function toggle(a,b){const i=findE(a,b);if(i>=0)edges.splice(i,1);else edges.push(a<b?[a,b]:[b,a]);dirty=true;}
+  function addNode(x,y){const id=nodes.length?Math.max(...nodes.map(n=>n.id))+1:1;nodes.push({id,x,y});dirty=true;}
+  function delNode(id){nodes=nodes.filter(n=>n.id!==id);edges=edges.filter(([a,b])=>a!==id&&b!==id);if(sel===id)sel=null;dirty=true;}
+  function code(){const N=nodes.length,L=edges.length;let s='import networkx as nx\n';
+    if(!dirty&&presetCode)s+=presetCode+'\n';
+    else{s+='G = nx.Graph()\n';if(N)s+=`G.add_nodes_from([${nodes.map(n=>n.id).join(', ')}])\n`;if(L){const t=edges.map(([a,b])=>`(${a}, ${b})`);const rows=[];for(let i=0;i<t.length;i+=5)rows.push(t.slice(i,i+5).join(', '));s+=`G.add_edges_from([${rows.join(',\n                  ')}])\n`;}}
+    const line=(c,out)=>(c.length<34?c.padEnd(34):c+'  ')+'# '+out+'\n';
+    s+='\n'+line('G.number_of_nodes()',N)+line('G.number_of_edges()',L);
+    s+=line('2 * G.number_of_edges() / G.number_of_nodes()',N?pyFloat(2*L/N):'ZeroDivisionError');
+    if(N&&N<=12)s+=line('dict(G.degree())','{'+nodes.map(n=>n.id+': '+degOf(n.id)).join(', ')+'}');
+    if(sel!==null)s+=line(`list(G.neighbors(${sel}))`,'['+nbrs(sel).join(', ')+']');
+    return s;}
+  function render(){V=viewBox(ui.canvas,W,H,40);const {ctx,X,Y,s}=V;R=clamp(s*0.027,11,18);
+    const nb=new Set(sel!==null?nbrs(sel):[]);const pos=new Map(nodes.map(n=>[n.id,[X(n.x),Y(n.y)]]));geo=[];
+    for(const [a,b] of edges){const hi=sel!==null&&(a===sel||b===sel);geo.push({a,b,g:drawLink(ctx,pos.get(a),pos.get(b),{color:hi?TK.i:TK.ink,width:hi?3.2:1.8,alpha:hi?1:0.5})});}
+    for(const n of nodes){const [x,y]=pos.get(n.id);const isS=n.id===sel;
+      drawNode(ctx,x,y,R,{fill:isS?TK.ink:TK.panel,stroke:nb.has(n.id)?TK.i:TK.ink,lw:nb.has(n.id)?3.2:2,label:n.id,labelColor:isS?TK.paper:TK.ink});
+      if(ui.vals.labels==='on')labelBox(ctx,'k = '+degOf(n.id),x,y-R-12,TK.s,`italic 600 14px ${SERIF}`);}
+    if(!nodes.length)txt(ctx,'Click anywhere to add the first node',V.w/2,V.h/2,{color:TK.muted,font:`14px ${SANS}`});
+    const N=nodes.length,L=edges.length;
+    ui.out('N',N);ui.out('L',L);ui.out('sum',2*L);ui.out('kbar',N?(2*L/N).toFixed(2):'–');
+    ui.status(sel!==null?`Node ${sel}: degree k = ${degOf(sel)}, neighbors [${nbrs(sel).join(', ')}]`:'Click a node to see its degree and neighbors.');
+    const K=Math.max(4,...nodes.map(n=>degOf(n.id)));const Nk=new Array(K+1).fill(0);for(const n of nodes)Nk[degOf(n.id)]++;
+    const mx=Math.max(1,...Nk);degBars(ui.charts.nk,Nk,{yMax:Math.max(2,mx+1),yFmt:v=>Number.isInteger(v)?v:''});
+    const pk=Nk.map(v=>N?v/N:0);degBars(ui.charts.pk,pk,{yMax:Math.max(0.2,Math.max(...pk)*1.18),yFmt:v=>+v.toFixed(2)});
+    setCode(code());}
+  const cv=ui.canvas;let drag=null;
+  const hitN=(px,py)=>{if(!V)return null;let best=null,bd=1e9;for(const n of nodes){const d=Math.hypot(V.X(n.x)-px,V.Y(n.y)-py);if(d<bd){bd=d;best=n;}}return bd<=R+5?best:null;};
+  const hitL=(px,py)=>{for(const g of geo)if(distToLink(g.g,px,py)<6)return g;return null;};
+  cv.addEventListener('pointerdown',e=>{const [px,py]=evPos(cv,e);const n=hitN(px,py);drag={n,sx:px,sy:py,moved:false};if(n)cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{const [px,py]=evPos(cv,e);
+    if(drag&&drag.n){if(Math.hypot(px-drag.sx,py-drag.sy)>4)drag.moved=true;if(drag.moved){const [x,y]=V.inv(px,py);drag.n.x=clamp(x,0,W);drag.n.y=clamp(y,0,H);render();}}
+    else cv.style.cursor=(hitN(px,py)||hitL(px,py))?'pointer':'crosshair';});
+  cv.addEventListener('pointerup',e=>{if(!drag)return;const [px,py]=evPos(cv,e);const d=drag;drag=null;
+    if(d.n){if(!d.moved){const id=d.n.id;if(sel===null)sel=id;else if(sel===id)sel=null;else{toggle(sel,id);sel=id;}}render();return;}
+    if(Math.hypot(px-d.sx,py-d.sy)>6)return;const l=hitL(px,py);if(l){toggle(l.a,l.b);render();return;}
+    if(sel!==null){sel=null;render();return;}const [x,y]=V.inv(px,py);if(x<0||x>W||y<0||y>H)return;addNode(x,y);render();});
+  document.addEventListener('keydown',e=>{if(current!=='deg'||sel===null)return;if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;
+    if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delNode(sel);render();}});
+  ui.btn.del.onclick=()=>{if(sel!==null){delNode(sel);render();}else ui.status('Select a node first.');};
+  ui.btn.reset.onclick=()=>load(ui.vals.preset);
+  register('a','deg','Nodes, links & degree',{ui,init:()=>load('lecture'),render});
+})();
+
+/* =========================================================
+   The seven bridges of Königsberg
+   ========================================================= */
+(function(){
+  const W=1.75,H=1;
+  const LAND=[{name:'Kneiphof (island)',lab:'K',x:0.42,y:0.5,side:'left'},{name:'North bank',lab:'N',x:0.9,y:0.1,side:'top'},
+    {name:'South bank',lab:'S',x:0.9,y:0.9,side:'bottom'},{name:'Lomse (east island)',lab:'L',x:1.33,y:0.5,side:'right'}];
+  const ORIG=[[0,1],[0,1],[0,2],[0,2],[0,3],[1,3],[2,3]];
+  const ui=buildPanel({id:'kon',title:'The seven bridges of Königsberg',
+    stageLabel:'The Königsberg bridges drawn as a network of four land masses and seven links',
+    legend:[['--i','crossed'],['--s','can cross next']],
+    hint:'Click a land mass to start, then click bridges (or the land on the other side) to cross them. Land masses with an odd number of bridges have a red outline.',
+    lead:'Königsberg had seven bridges joining four land masses. Can you take a walk that crosses every bridge exactly once? Euler (1736) replaced the map by a network: land masses become nodes, bridges become links, and only the degrees matter.',
+    formula:'A walk using every link exactly once exists if and only if the network is connected and the number of odd-degree nodes is <b>0 or 2</b>.<small>every visit to a node in the middle of the walk uses one link in and one link out, so those nodes need even degree; only the start and end can be odd</small>',
+    controls:[{type:'select',key:'mode',label:'Mode',options:[['walk','Walk across the bridges'],['build','Build or remove bridges']],value:'walk'}],
+    buttons:[['restart','Restart walk'],['undo','Undo step'],['solve','Show a walk'],['extra','Add an 8th bridge'],['orig','Back to the 7 bridges']],
+    readouts:[['L','Bridges <i>L</i>'],['odd','Odd-degree land masses'],['ok','Walk possible?'],['done','Crossed']],
+    note:'With the original seven bridges all four land masses have odd degree (5, 3, 3, 3), so no walk exists. Adding one bridge between the north and south banks makes the degrees 5, 4, 4, 3: two odd nodes, so a walk exists that starts on one of them and ends on the other.',
+    refs:['L. Euler, “Solutio problematis ad geometriam situs pertinentis,” <i>Commentarii Academiae Scientiarum Imperialis Petropolitanae</i> 8, 128–140 (1741; presented 1736).',
+      'C. Hierholzer and C. Wiener, “Über die Möglichkeit, einen Linienzug ohne Wiederholung und ohne Unterbrechung zu umfahren,” <i>Mathematische Annalen</i> 6, 30–32 (1873).',
+      'N. L. Biggs, E. K. Lloyd, and R. J. Wilson, <i>Graph Theory 1736–1936</i>, Oxford University Press (1976).',BOOK,BARABASI],
+    onChange:k=>{if(k==='mode'){buildSel=null;resetWalk();render();}}
+  });
+  let bridges=[],nextId=0,path=[],used=[],buildSel=null,timer=null,geo=[],V=null,R=20;
+  const cur=()=>path.length?path[path.length-1]:null;
+  function stopAnim(){if(timer){clearInterval(timer);timer=null;}}
+  function setBridges(list){bridges=list.map(([a,b])=>({id:nextId++,a:Math.min(a,b),b:Math.max(a,b)}));resetWalk();}
+  function resetWalk(){stopAnim();path=[];used=[];
+    ui.status(ui.vals.mode==='walk'?'Click a land mass to choose where to start.':'Click two land masses to build a bridge between them, or click a bridge to remove it.');}
+  const deg=i=>bridges.reduce((s,b)=>s+(b.a===i)+(b.b===i),0);
+  function analysis(){const d=LAND.map((_,i)=>deg(i));const odd=d.filter(x=>x%2).length;const st=d.findIndex(x=>x>0);let conn=true;
+    if(st>=0){const seen=new Set([st]);const q=[st];while(q.length){const u=q.pop();for(const b of bridges){const v=b.a===u?b.b:b.b===u?b.a:-1;if(v>=0&&!seen.has(v)){seen.add(v);q.push(v);}}}
+      conn=d.every((x,i)=>!x||seen.has(i));}
+    return {d,odd,conn,ok:bridges.length>0&&conn&&(odd===0||odd===2)};}
+  function euler(){const A=analysis();if(!A.ok)return null;const s=A.odd?A.d.findIndex(x=>x%2):A.d.findIndex(x=>x>0);
+    const adj=LAND.map(()=>[]);for(const b of bridges){adj[b.a].push({e:b.id,to:b.b});adj[b.b].push({e:b.id,to:b.a});}
+    const done=new Set(),st=[{v:s,e:null}],out=[];
+    while(st.length){const top=st[st.length-1];const L=adj[top.v];while(L.length&&done.has(L[L.length-1].e))L.pop();
+      if(L.length){const {e,to}=L.pop();done.add(e);st.push({v:to,e});}else out.push(st.pop());}
+    out.reverse();return {start:s,edges:out.slice(1).map(o=>o.e)};}
+  const avail=()=>{const c=cur();return bridges.filter(b=>!used.includes(b.id)&&(b.a===c||b.b===c));};
+  function cross(b){const c=cur();used.push(b.id);path.push(b.a===c?b.b:b.a);afterStep();}
+  function afterStep(){const c=cur();if(!bridges.length){ui.status('There are no bridges to cross.');return;}
+    if(used.length===bridges.length)ui.status(`Done: every bridge crossed exactly once, ending on ${LAND[c].name}${c===path[0]?', back where you started':''}.`);
+    else{const n=avail().length;ui.status(n?`On ${LAND[c].name}: ${n} unused bridge${n>1?'s':''} from here.`:`Stuck on ${LAND[c].name}: no unused bridge leaves from here. ${used.length} of ${bridges.length} crossed.`);}}
+  function render(){V=viewBox(ui.canvas,W,H,52);const {ctx,X,Y,s}=V;R=clamp(s*0.05,16,30);const A=analysis();const c=cur();
+    const av=new Set(ui.vals.mode==='walk'&&c!==null?avail().map(b=>b.id):[]);const grp=new Map();
+    for(const b of bridges){const k=b.a+'-'+b.b;if(!grp.has(k))grp.set(k,[]);grp.get(k).push(b);}geo=[];
+    for(const [k,list] of grp){const [a,b]=k.split('-').map(Number);const base=(a===1&&b===2)?0.86:0;const m=list.length;
+      list.forEach((br,j)=>{const bend=(base+(j-(m-1)/2)*0.15)*s;const u=used.indexOf(br.id),isA=av.has(br.id);
+        geo.push({br,g:drawLink(ctx,[X(LAND[a].x),Y(LAND[a].y)],[X(LAND[b].x),Y(LAND[b].y)],{bend,color:u>=0?TK.i:isA?TK.s:TK.ink,width:u>=0?4.2:isA?3.4:2.8,alpha:u>=0||isA?1:0.55,dash:isA?[8,5]:null,label:u>=0?String(u+1):null,labelColor:TK.i})});});}
+    LAND.forEach((l,i)=>{const x=X(l.x),y=Y(l.y);const odd=A.d[i]%2===1,isC=i===c,isB=buildSel===i;
+      drawNode(ctx,x,y,R,{fill:isC?TK.ink:isB?TK.s:TK.panel,stroke:odd?TK.i:TK.ink,lw:odd?3.6:2,label:l.lab,labelColor:isC||isB?TK.paper:TK.ink,font:`600 ${Math.round(R*0.75)}px ${SANS}`});
+      const kl=`k = ${A.d[i]}${odd?' (odd)':''}`;const kc=odd?TK.i:TK.s;const nf=`500 14px ${SANS}`,kf=`italic 600 15px ${SERIF}`;
+      const two=(x1,y1,y2,align)=>{ctx.font=nf;const w1=ctx.measureText(l.name).width;ctx.font=kf;const w2=ctx.measureText(kl).width;const ww=Math.max(w1,w2)+10;
+        const bx=align==='right'?x1-ww+5:align==='left'?x1-5:x1-ww/2;ctx.fillStyle=TK.panel;ctx.globalAlpha=0.9;ctx.fillRect(bx,Math.min(y1,y2)-11,ww,Math.abs(y2-y1)+22);ctx.globalAlpha=1;
+        txt(ctx,l.name,x1,y1,{align,font:nf});txt(ctx,kl,x1,y2,{align,font:kf,color:kc});};
+      if(l.side==='top')two(x,y-R-30,y-R-12,'center');else if(l.side==='bottom')two(x,y+R+12,y+R+30,'center');
+      else if(l.side==='left')two(x-R-10,y-9,y+10,'right');else two(x+R+10,y-9,y+10,'left');});
+    ui.out('L',bridges.length);ui.out('odd',A.odd);ui.out('ok',!bridges.length?'–':A.ok?(A.odd?'Yes (open)':'Yes (closed)'):'No');ui.out('done',`${used.length} / ${bridges.length}`);
+    ui.btn.extra.textContent=bridges.some(b=>b.extra)?'Remove the 8th bridge':'Add an 8th bridge';ui.btn.undo.disabled=!used.length;}
+  ui.canvas.addEventListener('click',e=>{if(!V)return;const [px,py]=evPos(ui.canvas,e);stopAnim();
+    let li=-1;LAND.forEach((l,i)=>{if(Math.hypot(V.X(l.x)-px,V.Y(l.y)-py)<=R+6)li=i;});
+    let bh=null;if(li<0){let bd=9;for(const g of geo){const d=distToLink(g.g,px,py);if(d<bd){bd=d;bh=g.br;}}}
+    if(ui.vals.mode==='walk'){
+      if(li>=0){if(cur()===null){path=[li];used=[];afterStep();}
+        else{const opts=avail().filter(b=>b.a===li||b.b===li);if(opts.length)cross(opts[0]);else if(li!==cur())ui.status(`No unused bridge from ${LAND[cur()].name} to ${LAND[li].name}.`);}}
+      else if(bh){if(cur()===null)ui.status('Click a land mass first to choose where to start.');else if(used.includes(bh.id))ui.status('That bridge has already been crossed.');
+        else if(bh.a!==cur()&&bh.b!==cur())ui.status(`That bridge does not touch ${LAND[cur()].name}.`);else cross(bh);}}
+    else{if(li>=0){if(buildSel===null)buildSel=li;else if(buildSel===li)buildSel=null;else{bridges.push({id:nextId++,a:Math.min(buildSel,li),b:Math.max(buildSel,li)});buildSel=null;resetWalk();}}
+      else if(bh){bridges=bridges.filter(b=>b!==bh);resetWalk();}}
+    render();});
+  ui.canvas.addEventListener('pointermove',e=>{if(!V)return;const [px,py]=evPos(ui.canvas,e);
+    const onL=LAND.some(l=>Math.hypot(V.X(l.x)-px,V.Y(l.y)-py)<=R+6),onB=geo.some(g=>distToLink(g.g,px,py)<9);ui.canvas.style.cursor=onL||onB?'pointer':'default';});
+  ui.btn.restart.onclick=()=>{resetWalk();render();};
+  ui.btn.undo.onclick=()=>{stopAnim();if(used.length){used.pop();path.pop();afterStep();}render();};
+  ui.btn.extra.onclick=()=>{const ex=bridges.find(b=>b.extra);if(ex)bridges=bridges.filter(b=>b!==ex);else bridges.push({id:nextId++,a:1,b:2,extra:true});resetWalk();render();};
+  ui.btn.orig.onclick=()=>{setBridges(ORIG);render();};
+  ui.btn.solve.onclick=()=>{stopAnim();const sol=euler();if(!sol){const A=analysis();
+      ui.status(!bridges.length?'There are no bridges.':!A.conn?'No such walk: the bridges do not connect all the land masses.':`No such walk: ${A.odd} land masses have an odd number of bridges, and Euler showed at most 2 may.`);render();return;}
+    if(ui.vals.mode!=='walk'){ui.vals.mode='walk';$('#kon-mode').value='walk';}
+    path=[sol.start];used=[];afterStep();render();let i=0;
+    timer=setInterval(()=>{if(i>=sol.edges.length){stopAnim();return;}const id=sol.edges[i++];cross(bridges.find(b=>b.id===id));render();},650);};
+  register('a','kon','Königsberg bridges',{ui,init:()=>{setBridges(ORIG);render();},render,stop:stopAnim});
+})();
+
+/* =========================================================
+   Density and sparsity
+   ========================================================= */
+(function(){
+  const ui=buildPanel({id:'den',title:'Density and sparsity',
+    stageLabel:'A random network on a circle, with a log-log plot of the number of links against the number of nodes',
+    legend:[['--s','sparse: fixed ⟨k⟩'],['--i','dense: fixed d']],
+    hint:'Top: one random network with the chosen N and L. Bottom: how L grows with N in each case, compared with the maximum possible L<sub>max</sub> (dashed).',
+    lead:'Among <i>N</i> nodes there are at most <i>L</i><sub>max</sub> links, one per pair. The density <i>d</i> is the fraction of these possible links that are present. Many real networks are sparse: <i>L</i> ≪ <i>L</i><sub>max</sub>, or <i>d</i> ≪ 1.',
+    formula:'<i>L</i><sub>max</sub> = <span class="binom"><span><i>N</i></span><span>2</span></span> = <i>N</i>(<i>N</i> − 1)/2<br><i>d</i> = <i>L</i>/<i>L</i><sub>max</sub> = 2<i>L</i>/[<i>N</i>(<i>N</i> − 1)]<br>sparse: <i>L</i> ~ <i>N</i> ⇒ <i>d</i> ~ 1/<i>N</i>, ⟨<i>k</i>⟩ ≈ const.<br>dense: <i>L</i> ~ <i>N</i><sup>2</sup> ⇒ <i>d</i> ≈ const., ⟨<i>k</i>⟩ ~ <i>N</i><small>the 2 in L<sub>max</sub>: the pair (i, j) is the same as (j, i), so dividing by 2 counts each pair once</small>',
+    controls:[{type:'select',key:'mode',label:'As N grows, keep',options:[['sparse','⟨k⟩ fixed (sparse, L ~ N)'],['dense','d fixed (dense, L ~ N²)']],value:'sparse'},
+      {key:'N',label:'Nodes <i>N</i>',min:4,max:120,step:1,value:7},
+      {key:'k',label:'Mean degree ⟨<i>k</i>⟩',min:1,max:10,step:0.1,value:2.9,fmt:v=>v.toFixed(1)},
+      {key:'d',label:'Density <i>d</i>',min:0.02,max:1,step:0.01,value:0.48,fmt:v=>v.toFixed(2)}],
+    buttons:[['new','New random network']],
+    readouts:[['L','Links <i>L</i>'],['Lmax','<i>L</i><sub>max</sub>'],['d','Density <i>d</i>'],['k','⟨<i>k</i>⟩ = 2<i>L</i>/<i>N</i>']],
+    charts:[['dN','Density d against N (log–log)',160]],
+    note:'The lecture example has N = 7 and L = 10, so L<sub>max</sub> = 7 × 6 / 2 = 21 and d = 10/21 ≈ 47.6%. Slide N up in sparse mode: ⟨k⟩ stays put while d falls like 1/N. In dense mode d stays put while ⟨k⟩ grows in proportion to N.',
+    refs:[BOOK,NEWMAN,BARABASI,'C. I. Del Genio, T. Gross, and K. E. Bassler, “All scale-free networks are sparse,” <i>Physical Review Letters</i> 107, 178701 (2011).'],
+    onInput:k=>{gen();render();},onChange:k=>{if(k==='mode'){show();gen();render();}}
+  });
+  const sub=el('<canvas class="sub" role="img" aria-label="Log-log plot of the number of links against the number of nodes"></canvas>');ui.canvas.after(sub);
+  let N=7,L=0,E=[];
+  function show(){const sp=ui.vals.mode==='sparse';ui.ctl_k.style.display=sp?'':'none';ui.ctl_d.style.display=sp?'none':'';}
+  function gen(){N=ui.vals.N;const Lm=N*(N-1)/2;L=ui.vals.mode==='sparse'?Math.min(Lm,Math.round(ui.vals.k*N/2)):Math.round(ui.vals.d*Lm);
+    const all=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)all.push([i,j]);shuffle(all);E=all.slice(0,L);}
+  const lg=Math.log10;
+  function render(){const V=viewBox(ui.canvas,1,1,22);const {ctx,X,Y,s}=V;const rr=0.46;const P=i=>{const a=-Math.PI/2+i*2*Math.PI/N;return [X(0.5+rr*Math.cos(a)),Y(0.5+rr*Math.sin(a))];};
+    ctx.strokeStyle=ui.vals.mode==='sparse'?TK.s:TK.i;ctx.lineWidth=1;ctx.globalAlpha=clamp(14/Math.sqrt(L+1),0.07,0.8);ctx.beginPath();
+    for(const [a,b] of E){const p=P(a),q=P(b);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);}ctx.stroke();ctx.globalAlpha=1;
+    const r=clamp(s*rr*Math.PI/N*0.55,2.5,11);for(let i=0;i<N;i++){const [x,y]=P(i);drawNode(ctx,x,y,r,{fill:TK.panel,lw:1.5});}
+    const Lm=N*(N-1)/2;ui.out('L',fmtInt(L));ui.out('Lmax',fmtInt(Lm));ui.out('d',`${(L/Lm*100).toFixed(1)}%`);ui.out('k',(2*L/N).toFixed(2));
+    ui.status(`N = ${N}: L = ${L} of ${Lm} possible links.`);
+    const sp=ui.vals.mode==='sparse',k=ui.vals.k,d=ui.vals.d;const xs=[];for(let i=0;i<=80;i++)xs.push(lg(2)+(4-lg(2))*i/80);
+    const curve=f=>xs.map(x=>{const n=10**x,y=f(n);return [x,y>0?lg(y):-9];});
+    const o=chart(sub,{xMin:lg(2),xMax:4,yMin:0,yMax:8,xLabel:'N',yLabel:'L',xFmt:pow10,yFmt:pow10,xTicks:4,yTicks:4,left:62,
+      series:[{pts:curve(n=>n*(n-1)/2),color:TK.muted,dash:[5,4],width:1.4},{pts:curve(n=>k*n/2),color:TK.s,width:sp?2.8:1.4},{pts:curve(n=>d*n*(n-1)/2),color:TK.i,width:sp?1.4:2.8}]});
+    const lab=(t,x,y,c)=>{const f=`italic 13px ${SERIF}`;o.ctx.font=f;const tw=o.ctx.measureText(t).width;o.ctx.fillStyle=TK.panel;o.ctx.globalAlpha=0.9;o.ctx.fillRect(o.X(x)-tw-3,o.Y(y)-9,tw+6,18);o.ctx.globalAlpha=1;txt(o.ctx,t,o.X(x),o.Y(y),{align:'right',color:c,font:f});};
+    lab('Lₘₐₓ = N(N − 1)/2',3.95,lg(1e4*(1e4-1)/2)+0.35,TK.muted);lab(`L = ⟨k⟩N/2 ~ N`,3.95,lg(k*1e4/2)-0.45,TK.s);lab(`L = d N(N − 1)/2 ~ N²`,3.3,lg(d*10**3.3*(10**3.3-1)/2)-1.25,TK.i);
+    o.ctx.fillStyle=sp?TK.s:TK.i;o.ctx.beginPath();o.ctx.arc(o.X(lg(N)),o.Y(lg(Math.max(L,1))),5.5,0,6.3);o.ctx.fill();
+    const o2=chart(ui.charts.dN,{xMin:lg(2),xMax:4,yMin:-4,yMax:0,xLabel:'N',xFmt:pow10,yFmt:pow10,xTicks:4,yTicks:4,left:44,
+      series:[{pts:[[lg(2),0],[4,0]],color:TK.muted,dash:[5,4],width:1.2},{pts:curve(n=>k/(n-1)),color:TK.s,width:sp?2.6:1.3},{pts:xs.map(x=>[x,lg(d)]),color:TK.i,width:sp?1.3:2.6}]});
+    o2.ctx.fillStyle=sp?TK.s:TK.i;o2.ctx.beginPath();o2.ctx.arc(o2.X(lg(N)),o2.Y(lg(Math.max(L/Lm,1e-9))),4.5,0,6.3);o2.ctx.fill();}
+  ui.btn.new.onclick=()=>{gen();render();};
+  register('b','den','Density & sparsity',{ui,init:()=>{show();gen();render();},render});
+})();
+
+/* =========================================================
+   Real networks are sparse (Table 1.1)
+   ========================================================= */
+(function(){
+  const DATA=[['Facebook Northwestern Univ.','',10567,488337,'0.009','92.4','r'],['IMDB movies and stars','',563443,921160,'0.000006','3.3','l'],
+    ['IMDB co-stars','W',252999,1015187,'0.00003','8.0','r'],['Twitter US politics','DW',18470,48365,'0.0001','2.6','l'],
+    ['Enron email','DW',87273,321918,'0.00004','3.7','l'],['Wikipedia math','D',15220,194103,'0.0008','12.8','r'],
+    ['Internet routers','',190914,607610,'0.00003','6.4','b'],['US air transportation','',546,2781,'0.02','10.2','r'],
+    ['World air transportation','',3179,18617,'0.004','11.7','r'],['Yeast protein interactions','',1870,2277,'0.001','2.4','l'],
+    ['C. elegans brain','DW',297,2345,'0.03','7.9','t'],['Everglades ecological food web','DW',69,916,'0.2','13.3','r']];
+  const calc=r=>{const [, t,N,L]=r;const dir=t.includes('D');return {dir,d:dir?L/(N*(N-1)):2*L/(N*(N-1)),k:dir?L/N:2*L/N};};
+  const ui=buildPanel({id:'tab',title:'Real networks are sparse',
+    stageLabel:'Log-log scatter plot of density against size for twelve real networks',
+    legend:[['--s','undirected'],['--i','directed']],
+    hint:'Each dot is one network from Table 1.1 of the textbook. Gray lines mark constant average degree, d = ⟨k⟩/(N − 1). Click a dot or a table row.',
+    lead:'These networks range from 69 to over 500,000 nodes, yet their average degrees all stay between about 2 and 100. So density falls as networks grow, and every one of them has <i>d</i> ≪ 1.',
+    formula:'undirected: &nbsp;<i>d</i> = 2<i>L</i>/[<i>N</i>(<i>N</i> − 1)], &nbsp;⟨<i>k</i>⟩ = 2<i>L</i>/<i>N</i><br>directed (D): &nbsp;<i>d</i> = <i>L</i>/[<i>N</i>(<i>N</i> − 1)], &nbsp;⟨<i>k</i><sub>in</sub>⟩ = ⟨<i>k</i><sub>out</sub>⟩ = <i>L</i>/<i>N</i><small>in a directed network i → j and j → i are different links, so L<sub>max</sub> = N(N − 1); W marks weighted networks</small>',
+    readouts:[],
+    note:'Check the table yourself, as on the slide: the Python lines above recompute d and ⟨k⟩ for the selected network from N and L alone.',
+    refs:[BOOK+' Table 1.1 and its data sources.',NXREF,NEWMAN]
+  });
+  const side=$('.side',ui.root),ctlBox=$('.controls',side);
+  const tw=el(`<div class="tablewrap"><table class="data"><thead><tr><th>Network</th><th>Type</th><th><i>N</i></th><th><i>L</i></th><th><i>d</i></th><th>⟨<i>k</i>⟩</th></tr></thead><tbody></tbody></table></div>`);
+  const tb=$('tbody',tw);DATA.forEach((r,i)=>{const tr=el(`<table><tr tabindex="0" aria-selected="false"><td>${r[0].replace('C. elegans','<i>C. elegans</i>')}</td><td>${r[1]}</td><td>${fmtInt(r[2])}</td><td>${fmtInt(r[3])}</td><td>${r[4]}</td><td>${r[5]}</td></tr></table>`).querySelector('tr');
+    tr.onclick=()=>{sel=i;render();};tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel=i;render();}};tb.append(tr);});
+  ctlBox.before(tw);
+  const setCheck=addCode(ui,'Check in Python (the values in the table are rounded)',tw);
+  const calcBox=el(`<div><p class="sub-h">Try your own numbers</p><div class="calc"><label>Nodes <i>N</i><input type="number" min="2" value="7" id="calcN"></label><label>Links <i>L</i><input type="number" min="0" value="10" id="calcL"></label><label>Type<select id="calcT"><option value="u">Undirected</option><option value="d">Directed</option></select></label></div><p class="calc-out" id="calcOut"></p></div>`);
+  $('.code',ui.root).after(calcBox);
+  function doCalc(){const N=+$('#calcN').value,L=+$('#calcL').value,dir=$('#calcT').value==='d';const out=$('#calcOut');
+    if(!(N>=2)||!(L>=0)){out.textContent='Enter N ≥ 2 and L ≥ 0.';return;}const Lm=dir?N*(N-1):N*(N-1)/2;
+    if(L>Lm){out.textContent=`L cannot exceed L_max = ${fmtInt(Lm)} for N = ${fmtInt(N)}.`;return;}
+    out.innerHTML=`<i>L</i><sub>max</sub> = ${fmtInt(Lm)}, &nbsp;<i>d</i> = ${(L/Lm).toPrecision(3)}, &nbsp;⟨<i>k</i>⟩ = ${(dir?L/N:2*L/N).toFixed(2)}${L/Lm<0.1?' (sparse)':''}`;}
+  ['calcN','calcL','calcT'].forEach(id=>$('#'+id).addEventListener('input',doCalc));
+  let sel=0,pts=[];const lg=Math.log10;
+  function render(){const o=chart(ui.canvas,{xMin:1.5,xMax:6.3,yMin:-6.5,yMax:0,xLabel:'number of nodes N',yLabel:'density d',xFmt:pow10,yFmt:pow10,xTicks:5,yTicks:6,left:52,
+      series:[1,10,100].map(k=>({pts:[...Array(61).keys()].map(i=>{const x=1.5+4.8*i/60;return [x,lg(k/(10**x-1))];}),color:TK['rule-strong'],width:1.2,dash:[2,4]}))});
+    const {ctx,X,Y}=o;[1,10,100].forEach(k=>{const x=6.15;txt(ctx,`⟨k⟩ = ${k}`,X(x),Y(lg(k/(10**x-1)))-9,{align:'right',color:TK.muted,font:`italic 12.5px ${SERIF}`});});
+    pts=[];DATA.forEach((r,i)=>{const c=calc(r);const x=X(lg(r[2])),y=Y(lg(c.d));pts.push([x,y]);const col=c.dir?TK.i:TK.s;
+      ctx.beginPath();ctx.arc(x,y,i===sel?7:5.5,0,6.3);ctx.fillStyle=col;ctx.fill();if(i===sel){ctx.lineWidth=2;ctx.strokeStyle=TK.ink;ctx.beginPath();ctx.arc(x,y,11,0,6.3);ctx.stroke();}
+      const a=r[6];const f=`${i===sel?'600 ':''}12.5px ${SANS}`;const off=12;
+      if(a==='r')txt(ctx,r[0],x+off,y,{align:'left',font:f});else if(a==='l')txt(ctx,r[0],x-off,y,{align:'right',font:f});
+      else if(a==='t')txt(ctx,r[0],x,y-off-2,{font:f});else txt(ctx,r[0],x,y+off+4,{font:f});});
+    [...tb.children].forEach((tr,i)=>tr.setAttribute('aria-selected',i===sel));
+    const r=DATA[sel],c=calc(r);
+    setCheck(c.dir?`>>> ${r[3]}/(${r[2]}*${r[2]-1})\n${pyFloat(c.d)}\n>>> ${r[3]}/${r[2]}\n${pyFloat(c.k)}`:`>>> 2*${r[3]}/(${r[2]}*${r[2]-1})\n${pyFloat(c.d)}\n>>> 2*${r[3]}/${r[2]}\n${pyFloat(c.k)}`);
+    ui.status(`${r[0]}: ${c.dir?'directed, so d = L/[N(N − 1)] and ⟨k⟩ = L/N':'undirected, so d = 2L/[N(N − 1)] and ⟨k⟩ = 2L/N'}.`);}
+  ui.canvas.addEventListener('click',e=>{const [px,py]=evPos(ui.canvas,e);let b=-1,bd=14;pts.forEach(([x,y],i)=>{const d=Math.hypot(x-px,y-py);if(d<bd){bd=d;b=i;}});if(b>=0){sel=b;render();}});
+  register('b','tab','Real networks are sparse',{ui,init:()=>{doCalc();render();},render});
+})();
+
+/* =========================================================
+   Weights and directions: degree and strength
+   ========================================================= */
+(function(){
+  const NODES=[['a',.107,.576],['b',.476,.588],['c',.881,.576],['d',.186,.282],['e',.293,.51],['f',.555,.216],['g',.71,.412],['h',.881,.282],['i',.71,.675]];
+  const ix=Object.fromEntries(NODES.map((n,i)=>[n[0],i]));
+  const E=[['d','e',1],['e','f',1],['f','b',3],['b','e',1],['b','g',1],['b','i',2],['h','g',1],['g','c',2]].map(([u,v,w])=>({u:ix[u],v:ix[v],w}));
+  const ui=buildPanel({id:'wd',title:'Weights and directions',
+    stageLabel:'The same network drawn undirected or directed, unweighted or weighted',
+    hint:'Click a node to see its degree and strength in all four versions. Click a link to change its weight (1 to 5).',
+    lead:'Links can have a direction (who follows whom, who emails whom) and a weight (how often, how much). In a directed network a node has an in-degree and an out-degree. In a weighted network the strength <i>s</i> adds up the weights of a node’s links.',
+    formula:'<i>s<sub>i</sub></i> = Σ<sub><i>j</i></sub> <i>w<sub>ij</sub></i> &nbsp;(undirected: <i>w<sub>ij</sub></i> = <i>w<sub>ji</sub></i>)<br><i>s<sub>i</sub></i><sup>in</sup> = Σ<sub><i>j</i></sub> <i>w<sub>ji</sub></i>, &nbsp;<i>s<sub>i</sub></i><sup>out</sup> = Σ<sub><i>j</i></sub> <i>w<sub>ij</sub></i> &nbsp;(directed: <i>w<sub>ij</sub></i> ≠ <i>w<sub>ji</sub></i> in general)<small>if all weights are 1 (an unweighted network), s<sub>i</sub> = k<sub>i</sub></small>',
+    controls:[{type:'select',key:'view',label:'Show',options:[['grid','All four versions'],['uu','Undirected, unweighted'],['du','Directed, unweighted'],['uw','Undirected, weighted'],['dw','Directed, weighted']],value:'grid'}],
+    buttons:[['resetw','Reset weights']],
+    readouts:[['k','Degree <i>k</i>'],['kin','<i>k</i><sub>in</sub>'],['kout','<i>k</i><sub>out</sub>'],['s','Strength <i>s</i>'],['sin','<i>s</i><sub>in</sub>'],['sout','<i>s</i><sub>out</sub>']],
+    note:'Example from the slides: a node i with four links of weights 9, 7, 8, and 8 has degree k<sub>i</sub> = 4 but strength s<sub>i</sub> = 32. In-degrees summed over all nodes equal out-degrees summed over all nodes, because every directed link has one tail and one head.',
+    refs:[BOOK+' Figures 1.1 and 1.4.','A. Barrat, M. Barthélemy, R. Pastor-Satorras, and A. Vespignani, “The architecture of complex weighted networks,” <i>PNAS</i> 101(11), 3747–3752 (2004).','M. E. J. Newman, “Analysis of weighted networks,” <i>Physical Review E</i> 70, 056131 (2004).',NEWMAN],
+    onChange:()=>render()
+  });
+  let sel=ix.b,hits=[];
+  function stats(x){let k=0,kin=0,kout=0,s=0,sin=0,sout=0;for(const e of E){if(e.u===x||e.v===x){k++;s+=e.w;}if(e.v===x){kin++;sin+=e.w;}if(e.u===x){kout++;sout+=e.w;}}return {k,kin,kout,s,sin,sout};}
+  function panel(ctx,r,dir,wt){ctx.save();ctx.strokeStyle=TK['rule-strong'];ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.strokeRect(r.x+0.5,r.y+0.5,r.w-1,r.h-1);ctx.setLineDash([]);ctx.restore();
+    const sc=Math.min(r.w*1.05,(r.h-64)/0.5);const cx=r.x+r.w/2,cy=r.y+r.h/2-12;const P=i=>[cx+(NODES[i][1]-0.49)*sc,cy+(NODES[i][2]-0.45)*sc];const rad=clamp(sc*0.033,8,17);
+    for(const e of E){const hi=e.u===sel||e.v===sel;const g=drawLink(ctx,P(e.u),P(e.v),{color:hi?TK.i:TK.ink,width:wt?1+e.w*1.5:(hi?2.6:1.8),alpha:hi?1:0.75,arrow:dir,r1:rad,r2:rad+1.5,
+        label:wt?e.w:null,labelColor:hi?TK.i:TK.ink,labelFont:`600 ${rad>12?13:11}px ${SANS}`});hits.push({t:'e',e,g});}
+    NODES.forEach((n,i)=>{const [x,y]=P(i);drawNode(ctx,x,y,rad,{tint:TK.s,tintAlpha:0.35,stroke:i===sel?TK.i:TK.ink,lw:i===sel?3:1.5,label:n[0]});hits.push({t:'n',i,x,y,r:rad});});
+    const [x,y]=P(sel);const st=stats(sel);const sz=rad>12?15:13;const y1=y+rad+sz*0.9;const c=TK.ink;
+    if(!dir&&!wt)subLabel(ctx,x,y1,'k','',` = ${st.k}`,c,sz);else if(!dir&&wt)subLabel(ctx,x,y1,'s','',` = ${st.s}`,c,sz);
+    else if(dir&&!wt){subLabel(ctx,x,y1,'k','in',` = ${st.kin}`,c,sz);subLabel(ctx,x,y1+sz*1.25,'k','out',` = ${st.kout}`,c,sz);}
+    else{subLabel(ctx,x,y1,'s','in',` = ${st.sin}`,c,sz);subLabel(ctx,x,y1+sz*1.25,'s','out',` = ${st.sout}`,c,sz);}}
+  function render(){const {ctx,w,h}=fitCanvas(ui.canvas);ctx.clearRect(0,0,w,h);hits=[];const v=ui.vals.view;
+    if(v==='grid'){const top=28,left=28;const pw=(w-left-6)/2,ph=(h-top-6)/2;
+      txt(ctx,'Undirected',left+pw/2,14,{font:`500 14px ${SANS}`});txt(ctx,'Directed',left+pw*1.5,14,{font:`500 14px ${SANS}`});
+      [['Unweighted',0],['Weighted',1]].forEach(([t,r])=>{ctx.save();ctx.translate(13,top+ph*r+ph/2);ctx.rotate(-Math.PI/2);txt(ctx,t,0,0,{font:`500 14px ${SANS}`});ctx.restore();});
+      for(let r=0;r<2;r++)for(let c=0;c<2;c++)panel(ctx,{x:left+c*pw,y:top+r*ph,w:pw,h:ph},c===1,r===1);}
+    else{const dir=v[0]==='d',wt=v[1]==='w';txt(ctx,`${dir?'Directed':'Undirected'}, ${wt?'weighted':'unweighted'}`,w/2,16,{font:`500 14px ${SANS}`});panel(ctx,{x:6,y:32,w:w-12,h:h-38},dir,wt);}
+    const st=stats(sel);ui.out('k',st.k);ui.out('kin',st.kin);ui.out('kout',st.kout);ui.out('s',st.s);ui.out('sin',st.sin);ui.out('sout',st.sout);
+    if(!ui._msg)ui.status(`Node ${NODES[sel][0]}: k = ${st.k} (in ${st.kin}, out ${st.kout}); s = ${st.s} (in ${st.sin}, out ${st.sout}).`);ui._msg=false;}
+  ui.canvas.addEventListener('click',e=>{const [px,py]=evPos(ui.canvas,e);
+    const n=hits.find(h=>h.t==='n'&&Math.hypot(h.x-px,h.y-py)<=h.r+5);if(n){sel=n.i;render();return;}
+    let best=null,bd=7;for(const h of hits)if(h.t==='e'){const d=distToLink(h.g,px,py);if(d<bd){bd=d;best=h;}}
+    if(best){best.e.w=best.e.w%5+1;ui.status(`Link ${NODES[best.e.u][0]}–${NODES[best.e.v][0]} now has weight ${best.e.w}.`);ui._msg=true;render();}});
+  ui.canvas.addEventListener('pointermove',e=>{const [px,py]=evPos(ui.canvas,e);ui.canvas.style.cursor=hits.some(h=>h.t==='n'?Math.hypot(h.x-px,h.y-py)<=h.r+5:distToLink(h.g,px,py)<7)?'pointer':'default';});
+  ui.btn.resetw.onclick=()=>{const W0=[1,1,3,1,1,2,1,2];E.forEach((e,i)=>e.w=W0[i]);render();};
+  register('c','wd','Weights & directions',{ui,init:render,render});
+})();
+
+/* =========================================================
+   Adjacency matrix and subnetworks
+   ========================================================= */
+(function(){
+  const P4=[[.13,.34],[.68,.13],[.41,.73],[.86,.62]];
+  const PRE={u4:{dir:false,wt:false,pos:P4,E:[[1,3],[1,4],[2,3],[2,4],[3,4]],sel:[1,2,3]},
+    d4:{dir:true,wt:false,pos:P4,E:[[1,3],[1,4],[2,4],[3,2],[4,3]],sel:[1,2,3]},
+    w7:{dir:true,wt:true,pos:[[.05,.14],[.35,.04],[.36,.27],[.6,.41],[.74,.18],[.83,.6],[.93,.32]],groups:[0,0,0,1,1,1,1],sel:[],
+      M:[[0,8,12,0,0,0,0],[0,0,5,0,0,0,0],[12,0,0,0,0,0,2],[0,0,16,0,8,10,0],[0,0,0,0,0,8,2],[0,0,0,1,0,0,3],[0,0,0,0,6,0,0]]}};
+  const ui=buildPanel({id:'adj',title:'Adjacency matrix and subnetworks',
+    stageLabel:'A network next to its adjacency matrix; selected nodes form a subnetwork whose matrix is shown below',
+    hint:'Hover a cell to find its link (and a link to find its cell). Click a cell to add or remove that link. Click nodes to choose a subnetwork.',
+    lead:'A network can be stored as an <i>N</i> × <i>N</i> table. Row <i>i</i>, column <i>j</i> says whether there is a link from node <i>i</i> to node <i>j</i>, or how heavy it is. A subnetwork keeps a subset of the nodes and the links among them, which is just the matching rows and columns.',
+    formula:'<i>a<sub>ij</sub></i> = 1 if <i>i</i> and <i>j</i> are adjacent, 0 otherwise; &nbsp;<i>w<sub>ij</sub></i> = weight of the link from <i>i</i> to <i>j</i><br>undirected: <i>a<sub>ij</sub></i> = <i>a<sub>ji</sub></i> (symmetric) &nbsp; directed: <i>a<sub>ij</sub></i> ≠ <i>a<sub>ji</sub></i> in general<small>a<sub>ij</sub> ≠ 0, a<sub>ji</sub> = 0: one-way link; both nonzero: two-way link</small>',
+    controls:[{type:'select',key:'pre',label:'Network',options:[['u4','Undirected (textbook Fig. 1.3)'],['d4','Directed (textbook Fig. 1.3)'],['w7','Weighted and directed (lecture example)']],value:'u4'}],
+    buttons:[['all','Select all nodes'],['none','Clear selection'],['reset','Reset links']],
+    readouts:[['N','Nodes <i>N</i>'],['L','Links <i>L</i>'],['sym','Symmetric?'],['sN','Subnetwork nodes'],['sL','Subnetwork links']],
+    note:'In the weighted example the two diagonal blocks are full of links while the off-diagonal blocks are almost empty: the nodes form two groups, a mesoscale structure that is easy to spot in the matrix once the nodes are ordered well.',
+    refs:[BOOK+' Figure 1.3 and Section 1.9.',NEWMAN,NXREF],
+    onChange:k=>{if(k==='pre')load();}
+  });
+  const setCode=addCode(ui,'In NetworkX');
+  let pre,n,A,A0,sel=new Set(),hover=null,geo=[],cells=[],nodesPx=[];
+  function load(){pre=PRE[ui.vals.pre];n=pre.pos.length;A=[...Array(n)].map(()=>new Array(n).fill(0));
+    if(pre.M)pre.M.forEach((row,i)=>row.forEach((v,j)=>A[i][j]=v));else for(const [a,b] of pre.E){A[a-1][b-1]=1;if(!pre.dir)A[b-1][a-1]=1;}
+    A0=A.map(r=>r.slice());sel=new Set(pre.sel.map(x=>x-1));hover=null;render();}
+  const links=()=>{const out=[];for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(A[i][j]&&(pre.dir||i<j))out.push([i,j,A[i][j]]);return out;};
+  const symmetric=()=>{for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(A[i][j]!==A[j][i])return false;return true;};
+  function code(){const ls=links();const S=[...sel].sort((a,b)=>a-b).map(i=>i+1);const ids=[...Array(n).keys()].map(i=>i+1);
+    let s=`import networkx as nx\nG = nx.${pre.dir?'DiGraph':'Graph'}()\nG.add_nodes_from([${ids.join(', ')}])\n`;
+    s+=pre.wt?`G.add_weighted_edges_from([${ls.map(([i,j,w])=>`(${i+1}, ${j+1}, ${w})`).join(', ')}])\n`:`G.add_edges_from([${ls.map(([i,j])=>`(${i+1}, ${j+1})`).join(', ')}])\n`;
+    s+=`\nA = nx.to_numpy_array(G, nodelist=[${ids.join(', ')}])   # matrix on the right\n`;
+    if(S.length)s+=`H = G.subgraph([${S.join(', ')}])\nnx.to_numpy_array(H, nodelist=[${S.join(', ')}])   # submatrix below it\n`;return s;}
+  function render(){const {ctx,w,h}=fitCanvas(ui.canvas);ctx.clearRect(0,0,w,h);geo=[];cells=[];nodesPx=[];
+    const wide=w>=620;const cap=n>=6?44:54;const mw=Math.min(w*0.55,n*cap+90);const NR=wide?{x:0,y:0,w:w-mw,h}:{x:0,y:0,w,h:h*0.42};const MR=wide?{x:w-mw,y:0,w:mw,h}:{x:0,y:h*0.42,w,h:h*0.58};
+    const S=[...sel].sort((a,b)=>a-b);const showSub=S.length>0;const wmax=Math.max(1,...A.flat());
+    // network
+    const xs=pre.pos.map(p=>p[0]),ys=pre.pos.map(p=>p[1]);const V=fitRect(ctx,NR,[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],Math.min(46,NR.w*0.1));
+    const rad=clamp(V.s*0.045,13,20);const Pp=i=>[V.X(pre.pos[i][0]),V.Y(pre.pos[i][1])];const faded=i=>sel.size&&!sel.has(i);
+    for(const [i,j,v] of links()){const both=pre.dir&&A[j][i];const hi=hover&&((hover.i===i&&hover.j===j)||(!pre.dir&&hover.i===j&&hover.j===i));
+      const g=drawLink(ctx,Pp(i),Pp(j),{bend:both?12:0,arrow:pre.dir,r1:rad,r2:rad+1.5,color:hi?TK.i:TK.ink,width:pre.wt?1+v*0.3:(hi?3:2),alpha:faded(i)||faded(j)?0.18:hi?1:0.8,
+        label:pre.wt?v:null,labelColor:hi?TK.i:TK.ink,labelFont:`600 11.5px ${SANS}`});geo.push({i,j,g});}
+    for(let i=0;i<n;i++){const [x,y]=Pp(i);const tint=pre.groups?(pre.groups[i]?TK.y:TK.s):TK.s;const hi=hover&&(hover.i===i||hover.j===i);
+      drawNode(ctx,x,y,rad,{tint,tintAlpha:0.4,stroke:sel.has(i)?TK.ink:hi?TK.i:TK.ink,lw:sel.has(i)?3.4:1.6,label:i+1,alpha:faded(i)?0.4:1});nodesPx.push([x,y,rad]);}
+    // matrix
+    const rows=n+(showSub?S.length:0);const cell=Math.floor(Math.min(cap,(MR.w-60)/n,(MR.h-(showSub?120:70))/rows));
+    const totH=n*cell+(showSub?52+S.length*cell:0);const mx=MR.x+(MR.w-n*cell)/2+10,my=Math.max(MR.y+46,MR.y+(MR.h-totH)/2+10);const lbl=pre.wt?'W':'A';
+    txt(ctx,`${lbl}: row i → column j`,mx+n*cell/2,my-30,{font:`italic 14px ${SERIF}`,color:TK.muted});
+    const drawM=(ox,oy,idx,tag)=>{for(let a=0;a<idx.length;a++){const i=idx[a];const hiR=hover&&hover.i===i;const hiC=hover&&hover.j===i;
+        txt(ctx,i+1,ox-12,oy+a*cell+cell/2,{font:`${sel.has(i)?'700':'400'} 12.5px ${SANS}`,color:hiR?TK.i:sel.has(i)?TK.ink:TK.muted});
+        txt(ctx,i+1,ox+a*cell+cell/2,oy-12,{font:`${sel.has(i)?'700':'400'} 12.5px ${SANS}`,color:hiC?TK.i:sel.has(i)?TK.ink:TK.muted});}
+      for(let a=0;a<idx.length;a++)for(let b=0;b<idx.length;b++){const i=idx[a],j=idx[b];const x=ox+b*cell,y=oy+a*cell;const v=A[i][j];
+        if(pre.groups&&pre.groups[i]===pre.groups[j]){ctx.fillStyle=pre.groups[i]?TK.y:TK.s;ctx.globalAlpha=0.14;ctx.fillRect(x,y,cell,cell);ctx.globalAlpha=1;}
+        if(v){ctx.fillStyle=TK.s;ctx.globalAlpha=0.25+0.55*v/wmax;ctx.fillRect(x+1,y+1,cell-2,cell-2);ctx.globalAlpha=1;}
+        ctx.strokeStyle=TK.rule;ctx.lineWidth=1;ctx.strokeRect(x+0.5,y+0.5,cell,cell);
+        txt(ctx,v,x+cell/2,y+cell/2+0.5,{font:`${v?'600 ':''}${Math.round(clamp(cell*0.36,10,15))}px ${SANS}`,color:v?TK.ink:TK.muted});
+        if(hover&&hover.i===i&&hover.j===j){ctx.strokeStyle=TK.i;ctx.lineWidth=2.5;ctx.strokeRect(x+1,y+1,cell-2,cell-2);}
+        cells.push({x,y,s:cell,i,j});}
+      if(tag==='main'&&sel.size&&sel.size<n){ctx.strokeStyle=TK.ink;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+        for(const i of S)for(const j of S)ctx.strokeRect(ox+j*cell+2.5,oy+i*cell+2.5,cell-5,cell-5);ctx.setLineDash([]);}};
+    drawM(mx,my,[...Array(n).keys()],'main');
+    if(pre.groups){ctx.strokeStyle=TK.i;ctx.setLineDash([4,3]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(mx,my+3*cell);ctx.lineTo(mx+n*cell,my+3*cell);ctx.moveTo(mx+3*cell,my);ctx.lineTo(mx+3*cell,my+n*cell);ctx.stroke();ctx.setLineDash([]);}
+    if(showSub){const sy=my+n*cell+52;txt(ctx,`Subnetwork of nodes ${S.map(i=>i+1).join(', ')}`,mx+n*cell/2,sy-30,{font:`italic 14px ${SERIF}`,color:TK.muted});drawM(mx+(n-S.length)*cell/2,sy,S,'sub');}
+    let L=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(A[i][j]&&(pre.dir||i<j))L++;let sL=0;for(const i of S)for(const j of S)if(A[i][j]&&(pre.dir||i<j))sL++;
+    ui.out('N',n);ui.out('L',L);ui.out('sym',symmetric()?'yes':'no');ui.out('sN',S.length);ui.out('sL',sL);
+    if(hover){const {i,j}=hover;const v=A[i][j];ui.status(`${pre.wt?'w':'a'}${i+1}${j+1} = ${v}: ${v?(pre.dir?`link from ${i+1} to ${j+1}`:`link between ${i+1} and ${j+1}`)+(pre.wt?` with weight ${v}`:''):`no link from ${i+1} to ${j+1}`}${pre.dir&&v&&A[j][i]?' (two-way)':pre.dir&&v?' (one-way)':''}.`);}
+    else ui.status(symmetric()?'The matrix is symmetric, so every link goes both ways: an undirected network.':'The matrix is not symmetric: a directed network.');
+    setCode(code());}
+  const hit=(px,py)=>{for(let i=0;i<nodesPx.length;i++){const [x,y,r]=nodesPx[i];if(Math.hypot(x-px,y-py)<=r+4)return {t:'n',i};}
+    for(const c of cells)if(px>=c.x&&px<c.x+c.s&&py>=c.y&&py<c.y+c.s)return {t:'c',i:c.i,j:c.j};
+    let best=null,bd=7;for(const g of geo){const d=distToLink(g.g,px,py);if(d<bd){bd=d;best={t:'l',i:g.i,j:g.j};}}return best;};
+  ui.canvas.addEventListener('pointermove',e=>{const [px,py]=evPos(ui.canvas,e);const h=hit(px,py);ui.canvas.style.cursor=h?'pointer':'default';
+    const nh=h&&(h.t==='c'||h.t==='l')?{i:h.i,j:h.j}:null;if(JSON.stringify(nh)!==JSON.stringify(hover)){hover=nh;render();}});
+  ui.canvas.addEventListener('pointerleave',()=>{if(hover){hover=null;render();}});
+  ui.canvas.addEventListener('click',e=>{const [px,py]=evPos(ui.canvas,e);const h=hit(px,py);if(!h)return;
+    if(h.t==='n'){sel.has(h.i)?sel.delete(h.i):sel.add(h.i);render();return;}
+    if(h.t==='c'){const {i,j}=h;if(i===j){ui.status('The diagonal stays 0: no self-links in these networks.');return;}
+      A[i][j]=A[i][j]?0:(pre.wt?(A0[i][j]||1):1);if(!pre.dir)A[j][i]=A[i][j];hover={i,j};render();}});
+  ui.btn.all.onclick=()=>{sel=new Set([...Array(n).keys()]);render();};ui.btn.none.onclick=()=>{sel=new Set();render();};
+  ui.btn.reset.onclick=()=>{A=A0.map(r=>r.slice());render();};
+  register('c','adj','Adjacency matrix',{ui,init:load,render});
+})();
+
+/* =========================================================
+   Multilayer and temporal networks
+   ========================================================= */
+(function(){
+  const N=20;const grp=i=>i<10?0:1;
+  const ui=buildPanel({id:'ml',title:'Multilayer and temporal networks',
+    stageLabel:'Stacked layers of the same nodes with intralayer and interlayer links',
+    legend:[['--i','group 1'],['--s','group 2'],['--r','interlayer links']],
+    hint:'Click a node to follow it through the layers. Its interlayer links (green, dashed) join its copies: only adjacent layers for layers ordered in time, every pair of layers for categories.',
+    lead:'Sometimes one network is not enough. The links among the same people can change over time (temporal layers in order), or people can interact in different ways (layers of different kinds). Intralayer links are the ordinary networks inside each layer; interlayer links usually join a node to its own copy in another layer.',
+    formula:'<i>Q</i> = <sup>1</sup>⁄<sub>2<i>μ</i></sub> Σ<sub><i>ijsr</i></sub> [ (<i>A<sub>ijs</sub></i> − <i>γ<sub>s</sub></i> <i>k<sub>is</sub>k<sub>js</sub></i>/2<i>m<sub>s</sub></i>) <i>δ<sub>sr</sub></i> + <i>δ<sub>ij</sub></i> <i>C<sub>jsr</sub></i> ] <i>δ</i>(<i>g<sub>is</sub></i>, <i>g<sub>jr</sub></i>)<small>multilayer modularity for finding groups across layers (Mucha et al. 2010): the first term uses intralayer links in each layer s, the second the coupling C<sub>jsr</sub> of node j to itself between layers s and r; g<sub>is</sub> is the group of node i in layer s</small>',
+    controls:[{type:'select',key:'kind',label:'Layers are',options:[['ord','Ordered in time'],['cat','Different kinds (categories)']],value:'ord'},
+      {type:'select',key:'view',label:'View',options:[['stack','Stack of layers'],['agg','Aggregated static network']],value:'stack'},
+      {type:'select',key:'inter',label:'Interlayer links',options:[['sel','For the selected node'],['all','For all nodes']],value:'sel'},
+      {key:'n',label:'Number of layers',min:2,max:5,step:1,value:5}],
+    buttons:[['new','New snapshots']],
+    readouts:[['N','Nodes per layer'],['intra','Intralayer links'],['inter','Interlayer links'],['agg','Links in static network'],['always','Links in every layer']],
+    charts:[['per','Intralayer links in each layer',120]],
+    note:'The snapshots here are synthetic: two groups with dense links inside and few links between, much like the political retweet network on the slide. Aggregating over time gives one static, weighted network but loses when each link was active.',
+    refs:[BOOK+' Section 1.8.','P. J. Mucha, T. Richardson, K. Macon, M. A. Porter, and J.-P. Onnela, “Community structure in time-dependent, multiscale, and multiplex networks,” <i>Science</i> 328, 876–878 (2010).',
+      'M. Kivelä, A. Arenas, M. Barthelemy, J. P. Gleeson, Y. Moreno, and M. A. Porter, “Multilayer networks,” <i>Journal of Complex Networks</i> 2(3), 203–271 (2014).',
+      'S. Boccaletti et al., “The structure and dynamics of multilayer networks,” <i>Physics Reports</i> 544(1), 1–122 (2014).',
+      'P. Holme and J. Saramäki, “Temporal networks,” <i>Physics Reports</i> 519(3), 97–125 (2012).',
+      'M. D. Conover et al., “Political polarization on Twitter,” <i>Proc. 5th International AAAI Conference on Weblogs and Social Media (ICWSM)</i>, 89–96 (2011).',
+      'W. W. Zachary, “An information flow model for conflict and fission in small groups,” <i>Journal of Anthropological Research</i> 33(4), 452–473 (1977).'],
+    onChange:k=>{if(k!=='n')render();},onInput:k=>{if(k==='n'){gen();render();}}
+  });
+  const setCode=addCode(ui,'NetworkX has no multilayer type: one way to encode it');
+  let layers=[],agg=new Map(),pos=[],sel=0,hitPts=[];
+  function gen(){const n=ui.vals.n;layers=[];const keep=0.6;
+    for(let s=0;s<n;s++){const S=new Set();for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const p=grp(i)===grp(j)?0.3:0.02;const k=i*N+j;
+        const on=s===0?Math.random()<p:(layers[s-1].has(k)?Math.random()<keep:Math.random()<p*(1-keep)/(1-p));if(on)S.add(k);}layers.push(S);}
+    agg=new Map();for(const S of layers)for(const k of S)agg.set(k,(agg.get(k)||0)+1);
+    const g={N,adj:Array.from({length:N},()=>[])};for(const k of agg.keys()){const i=Math.floor(k/N),j=k%N;g.adj[i].push(j);g.adj[j].push(i);}
+    frLayout(g,300,0.1,true);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let i=0;i<N;i++){x0=Math.min(x0,g.px[i]);x1=Math.max(x1,g.px[i]);y0=Math.min(y0,g.py[i]);y1=Math.max(y1,g.py[i]);}
+    pos=[...Array(N).keys()].map(i=>[0.1+0.8*(g.px[i]-x0)/(x1-x0||1),0.1+0.8*(g.py[i]-y0)/(y1-y0||1)]);}
+  const col=i=>grp(i)?TK.s:TK.i;
+  function render(){const {ctx,w,h}=fitCanvas(ui.canvas);ctx.clearRect(0,0,w,h);hitPts=[];const n=layers.length,cat=ui.vals.kind==='cat';
+    if(ui.vals.view==='stack'){const pad=22;const uw=Math.min(w*0.42,(w-2*pad)/(n+0.15)*0.94);const uy=-Math.min(uw*0.35,h*0.08);const vh=Math.min(h*0.66,h-2*pad-60);
+      const sx=n>1?(w-2*pad-uw)/(n-1):0,sy=n>1?Math.max(0,(h-2*pad-26-Math.abs(uy)-vh)/(n-1)):0;
+      const Pt=(s,u,v)=>[pad+s*sx+u*uw,pad+Math.abs(uy)+s*sy+u*uy+v*vh];const r=clamp(uw/55,3.2,6);
+      for(let s=n-1;s>=0;s--){const c=[Pt(s,0,0),Pt(s,1,0),Pt(s,1,1),Pt(s,0,1)];ctx.beginPath();c.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();
+        ctx.fillStyle=TK.panel;ctx.globalAlpha=0.9;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=TK['rule-strong'];ctx.lineWidth=1;ctx.stroke();
+        txt(ctx,cat?`layer ${s+1}`:`t = ${s+1}`,c[2][0]-8,c[2][1]-10,{align:'right',font:`italic 13px ${SERIF}`,color:TK.muted});
+        ctx.lineWidth=0.8;for(const k of layers[s]){const i=Math.floor(k/N),j=k%N;const hi=i===sel||j===sel;const a=Pt(s,...pos[i]),b=Pt(s,...pos[j]);
+          ctx.strokeStyle=hi?TK.ink:grp(i)===grp(j)?col(i):TK.muted;ctx.globalAlpha=hi?0.9:0.4;ctx.lineWidth=hi?1.6:0.8;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+        ctx.globalAlpha=1;for(let i=0;i<N;i++){const p=Pt(s,...pos[i]);ctx.beginPath();ctx.arc(p[0],p[1],i===sel?r+1.5:r,0,6.3);ctx.fillStyle=col(i);ctx.fill();
+          if(i===sel){ctx.lineWidth=2;ctx.strokeStyle=TK.ink;ctx.stroke();}hitPts.push([p[0],p[1],i]);}}
+      const who=ui.vals.inter==='all'?[...Array(N).keys()]:[sel];
+      for(const i of who){const one=who.length===1;for(let s=0;s<n;s++)for(let t=s+1;t<n;t++){if(!cat&&t!==s+1)continue;
+          drawLink(ctx,Pt(s,...pos[i]),Pt(t,...pos[i]),{bend:(t-s-1)*18,color:TK.r,width:one?1.8:0.9,dash:[5,4],alpha:one?0.95:0.35});}}}
+    else{const V=fitRect(ctx,{x:0,y:0,w,h},[0,0,1,1],30);const r=clamp(V.s*0.018,5,10);
+      for(const [k,c] of agg){const i=Math.floor(k/N),j=k%N;const hi=i===sel||j===sel;ctx.strokeStyle=hi?TK.ink:grp(i)===grp(j)?col(i):TK.muted;ctx.globalAlpha=hi?0.9:0.55;
+        ctx.lineWidth=0.6+1.3*(c-1)+(hi?0.6:0);ctx.beginPath();ctx.moveTo(V.X(pos[i][0]),V.Y(pos[i][1]));ctx.lineTo(V.X(pos[j][0]),V.Y(pos[j][1]));ctx.stroke();}
+      ctx.globalAlpha=1;for(let i=0;i<N;i++){const x=V.X(pos[i][0]),y=V.Y(pos[i][1]);ctx.beginPath();ctx.arc(x,y,i===sel?r+2:r,0,6.3);ctx.fillStyle=col(i);ctx.fill();
+        if(i===sel){ctx.lineWidth=2;ctx.strokeStyle=TK.ink;ctx.stroke();}hitPts.push([x,y,i]);}
+      txt(ctx,`Line width = number of the ${n} ${cat?'layers':'snapshots'} that contain the link`,w/2,h-12,{color:TK.muted,font:`13px ${SANS}`});}
+    const intra=layers.reduce((a,S)=>a+S.size,0);const inter=cat?N*n*(n-1)/2:N*(n-1);let always=0;for(const c of agg.values())if(c===n)always++;
+    ui.out('N',N);ui.out('intra',intra);ui.out('inter',inter);ui.out('agg',agg.size);ui.out('always',always);
+    let deg=0;for(const k of agg.keys()){if(Math.floor(k/N)===sel||k%N===sel)deg++;}const per=layers.map(S=>{let d=0;for(const k of S)if(Math.floor(k/N)===sel||k%N===sel)d++;return d;});
+    ui.status(`Node ${sel+1} (group ${grp(sel)+1}): degree ${per.join(', ')} in the ${cat?'layers':'snapshots'}; ${deg} distinct neighbors overall.`);
+    const c=degBars(ui.charts.per,[0,...layers.map(S=>S.size)],{yMax:Math.max(...layers.map(S=>S.size))*1.2,xLabel:cat?'layer':'t',xFmt:v=>Number.isInteger(v)&&v>=1?String(v):'',yFmt:v=>Number.isInteger(v)?v:''});
+    setCode(`import networkx as nx${cat?'\nimport itertools':''}\n\nM = nx.Graph()   # node i in layer s is the tuple (i, s)\nfor s, layer in enumerate(layers):            # intralayer links\n    M.add_edges_from(((i, s), (j, s)) for i, j in layer)\n`+
+      (cat?`for i in nodes:                                # interlayer links: all pairs of layers\n    for s, r in itertools.combinations(range(len(layers)), 2):\n        M.add_edge((i, s), (i, r), weight=omega)\n`:`for i in nodes:                                # interlayer links: adjacent layers\n    for s in range(len(layers) - 1):\n        M.add_edge((i, s), (i, s + 1), weight=omega)\n`)+
+      `\nS = nx.Graph()   # aggregated static network\nfor layer in layers:\n    for i, j in layer:\n        w = S.get_edge_data(i, j, {"weight": 0})["weight"]\n        S.add_edge(i, j, weight=w + 1)\n`);}
+  ui.canvas.addEventListener('click',e=>{const [px,py]=evPos(ui.canvas,e);let b=-1,bd=10;for(const [x,y,i] of hitPts){const d=Math.hypot(x-px,y-py);if(d<bd){bd=d;b=i;}}if(b>=0){sel=b;render();}});
+  ui.canvas.addEventListener('pointermove',e=>{const [px,py]=evPos(ui.canvas,e);ui.canvas.style.cursor=hitPts.some(([x,y])=>Math.hypot(x-px,y-py)<10)?'pointer':'default';});
+  ui.btn.new.onclick=()=>{gen();render();};
+  register('d','ml','Multilayer & temporal',{ui,init:()=>{gen();render();},render});
+})();
+
+/* ---------- tabs ---------- */
+const nav=$('#tabs');let current=null;const inited=new Set();
+for(const gr of groups){const d=el(`<div class="group"><span class="sec">${gr.name}</span></div>`);
+  for(const tb of gr.tabs){const b=el(`<button class="tab" role="tab" id="tab-${tb.id}" aria-controls="p-${tb.id}" aria-selected="false">${tb.label}</button>`);b.onclick=()=>select(tb.id);d.append(b);}
+  nav.append(d);}
+function select(id){if(current&&models[current].stop)models[current].stop();
+  document.querySelectorAll('.panel').forEach(p=>p.hidden=p.id!=='p-'+id);
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.id==='tab-'+id));
+  current=id;try{history.replaceState(null,'','#'+id);}catch(e){}
+  requestAnimationFrame(()=>{if(!inited.has(id)){inited.add(id);models[id].init();}else models[id].render();});}
+const start=(location.hash||'').slice(1);select(models[start]?start:'deg');
+
+new ResizeObserver(()=>{if(current&&inited.has(current))models[current].render();}).observe($('#panels'));
+const mq=matchMedia('(prefers-color-scheme: dark)');(mq.addEventListener?mq.addEventListener('change',()=>{readTokens();models[current].render();}):null);
+document.fonts&&document.fonts.ready.then(()=>{if(current&&inited.has(current))models[current].render();});
+</script>
+</body>
+</html>
