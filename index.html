@@ -40,7 +40,7 @@ nav.tabs{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px;border-bot
 .tab{font:inherit;font-size:14px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
 .tab:hover{border-color:var(--rule-strong)}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button:focus-visible,select:focus-visible,input:focus-visible,pre[tabindex]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
 .panel{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
 .panel[hidden]{display:none}
@@ -383,7 +383,7 @@ function subLabel(ctx,x,y,base,sub,rest,color,size=14){const f1=`italic ${size}p
   ctx.font=f1;const w1=ctx.measureText(base).width;ctx.font=f2;const w2=sub?ctx.measureText(sub).width:0;ctx.font=f3;const w3=ctx.measureText(rest).width;
   let cx=x-(w1+w2+w3)/2;ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.font=f1;ctx.fillText(base,cx,y);cx+=w1;if(sub){ctx.font=f2;ctx.fillText(sub,cx,y+size*0.3);cx+=w2;}ctx.font=f3;ctx.fillText(rest,cx,y);}
-function addCode(ui,caption,anchor){const f=el(`<figure class="code"><figcaption><span>${caption}</span><button class="copy" type="button">Copy</button></figcaption><pre><code></code></pre></figure>`);
+function addCode(ui,caption,anchor){const f=el(`<figure class="code"><figcaption><span>${caption}</span><button class="copy" type="button">Copy</button></figcaption><pre tabindex="0" role="region" aria-label="Code: ${String(caption).replace(/<[^>]+>/g,'')}"><code></code></pre></figure>`);
   (anchor||$('.charts',ui.root)).after(f);const code=$('code',f),btn=$('.copy',f);
   btn.onclick=async()=>{try{await navigator.clipboard.writeText(code.textContent);btn.textContent='Copied';}catch(e){btn.textContent='Select and copy';}setTimeout(()=>btn.textContent='Copy',1400);};
   return t=>{code.textContent=t;};}
@@ -583,7 +583,10 @@ const BARABASI='A.-L. Barabási, <i>Network Science</i>, Cambridge University Pr
   const sub=el('<canvas class="sub" role="img" aria-label="Log-log plot of the number of links against the number of nodes"></canvas>');ui.canvas.after(sub);
   let N=7,L=0,E=[];
   function show(){const sp=ui.vals.mode==='sparse';ui.ctl_k.style.display=sp?'':'none';ui.ctl_d.style.display=sp?'none':'';}
-  function gen(){N=ui.vals.N;const Lm=N*(N-1)/2;L=ui.vals.mode==='sparse'?Math.min(Lm,Math.round(ui.vals.k*N/2)):Math.round(ui.vals.d*Lm);
+  // ⟨k⟩ cannot exceed N − 1, so the slider range follows N and the input always matches the drawn network
+  function syncK(){const n=ui.ctl_k.querySelector('input'),o=ui.ctl_k.querySelector('output'),mx=Math.min(10,ui.vals.N-1);n.max=mx;
+    if(ui.vals.k>mx){ui.vals.k=mx;n.value=mx;o.textContent=mx.toFixed(1);}}
+  function gen(){N=ui.vals.N;syncK();const Lm=N*(N-1)/2;L=ui.vals.mode==='sparse'?Math.min(Lm,Math.round(ui.vals.k*N/2)):Math.round(ui.vals.d*Lm);
     const all=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)all.push([i,j]);shuffle(all);E=all.slice(0,L);}
   const lg=Math.log10;
   function render(){const V=viewBox(ui.canvas,1,1,22);const {ctx,X,Y,s}=V;const rr=0.46;const P=i=>{const a=-Math.PI/2+i*2*Math.PI/N;return [X(0.5+rr*Math.cos(a)),Y(0.5+rr*Math.sin(a))];};
